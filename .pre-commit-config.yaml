@@ -1,0 +1,31 @@
+# Version should match to the version of poetry.lock file.
+# Setting should match to the CI checklists.
+
+repos:
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.10.1
+    hooks:
+      - id: isort
+        stages: [commit]
+        args: [ "--diff", "--profile", "black" ]
+  - repo: https://github.com/ambv/black
+    rev: 22.6.0
+    hooks:
+      - id: black
+        stages: [commit]
+        args: [ "--check" ]
+  - repo: https://github.com/PyCQA/flake8
+    rev: 5.0.4
+    hooks:
+      - id: flake8
+        stages: [commit]
+#  - repo: https://github.com/pre-commit/mirrors-pylint
+#    rev: v2.15.0
+#    hooks:
+#      - id: pylint
+#        stages: [commit]
+#  - repo: https://github.com/pre-commit/mirrors-mypy
+#    rev: v0.720
+#    hooks:
+#      - id: mypy
+#        stages: [commit]
