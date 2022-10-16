@@ -11,7 +11,7 @@ class UserInCreate(UserBase):
 
 
 class UserInDB(UserBase):
-    user_id: str
+    user_id: int
     hashed_password: str = ""
     salt: str = ""
 
