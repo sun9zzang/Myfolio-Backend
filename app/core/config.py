@@ -13,8 +13,11 @@ class Settings(BaseSettings):
     DB_CONNECTION_STRING = ""  # todo security
 
     # JWT authentication config
-    SECRET_KEY: str = ""  # todo security
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    JWT_TOKEN_PREFIX = "Token"
+    JWT_SUBJECT = "access"
+    ALGORITHM = "HS256"
+    SECRET_KEY = ""  # todo security
+    ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
 settings = Settings()
