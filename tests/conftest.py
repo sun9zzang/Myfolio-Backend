@@ -11,8 +11,8 @@ from app.application import get_application
 
 
 class UserTestData(Enum):
-    email = "test_username"
-    username = "test@test.com"
+    email = "test@test.com"
+    username = "test_username"
     password = "p@ssw0rd"
 
 
@@ -37,15 +37,20 @@ def user_data() -> dict:
 
 
 @pytest.fixture
-def user(user_data) -> UserInDB:
+def user_setup() -> UserInDB:
+    pass
+
+
+@pytest.fixture
+def user(user_data: dict) -> UserInDB:
     users_repo = UsersRepository()
     user_in_create = UserInCreate(**user_data)
-    user_in_db = await users_repo.create_user(user_in_create)
+    user_in_db = users_repo.create_user(user_in_create)
     print(f"SETUP user is created - {user_in_db}")
 
     yield user_in_db
 
-    await users_repo.withdraw_user(user_in_db.user_id)
+    users_repo.withdraw_user(user_in_db.user_id)
     print(f"TEARDOWN user withdrew - user_id: {user_in_db.user_id}")
 
 

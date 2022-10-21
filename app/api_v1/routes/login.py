@@ -26,18 +26,16 @@ async def login(
     )
 
     try:
-        user_in_db = await users_repo.get_user_by_email(user_in_login.email)
+        user_in_db = users_repo.validate_login(user_in_login)
     except EntityDoesNotExist:
         raise login_error
-
-    if user_in_db.check_password(user_in_login.password):
+    else:
         token = jwt.create_access_token_for_user(user_in_db)
         return UserInResponse(
             user=UserWithToken(
+                user_id=user_in_db.user_id,
                 email=user_in_db.email,
                 username=user_in_db.username,
                 token=token,
-            ),
+            )
         )
-    else:
-        raise login_error

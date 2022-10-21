@@ -35,9 +35,7 @@ def test_cannot_login_with_wrong_credentials(
     )
     print(f"response body: {response.json()}")
 
-    assert (
-        response.status_code == status.HTTP_400_BAD_REQUEST
-    ), "HTTP response status code should be 400"
+    assert response.status_code == status.HTTP_400_BAD_REQUEST, "HTTP response status code should be 400"
 
 
 def test_can_login(
@@ -55,6 +53,4 @@ def test_can_login(
     )
     print(f"response body: {response.json()}")
 
-    assert (
-        response.status_code == status.HTTP_200_OK
-    ), "HTTP response status code should be 400"
+    assert response.status_code == status.HTTP_200_OK, "HTTP response status code should be 200"

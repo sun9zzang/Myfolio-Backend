@@ -1,4 +1,4 @@
-from app.db.session import db
+from app.dependencies.database import db
 
 
 class BaseRepository:

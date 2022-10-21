@@ -42,7 +42,7 @@ def _get_current_user(
     token: str = _get_authorization_header(),
 ) -> UserInDB:
     try:
-        user_id = jwt.get_user_id_from_token(token, settings.SECRET_KEY)
+        user_id = jwt.get_user_id_from_token(token)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

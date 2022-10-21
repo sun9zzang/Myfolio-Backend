@@ -29,16 +29,14 @@ def create_access_token_for_user(
             email=user_in_db.email,
             username=user_in_db.username,
         ).dict(),
-        secret_key=settings.SECRET_KEY,
+        secret_key=settings.JWT_SECRET_KEY,
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
 
 
 def get_user_id_from_token(token: str) -> int:
     try:
-        return JWTUser(
-            **jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        ).user_id
+        return JWTUser(**jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.ALGORITHM])).user_id
     except jwt.PyJWTError as decode_error:
         raise ValueError("unable to decode JWT token") from decode_error
     except ValidationError as validation_error:

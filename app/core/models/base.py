@@ -1,4 +1,2 @@
-from sqlalchemy.orm import declarative_base
-
-
-Base = declarative_base()
+from app.core.models.base_generate import Base
+from app.core.models.users import TblUsers
