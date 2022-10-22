@@ -3,18 +3,18 @@ from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 
 from app.core.schemas.users import UserInDB
+from tests.conftest import UserTestData
 
 
 @pytest.mark.parametrize(
     "credentials_field, credentials_value",
     [
-        ("email", "wrong_email@wrong.com"),
-        ("password", "wrong_p@ssw0rd"),
+        (UserTestData.email.name, "wrong_email@wrong.com"),
+        (UserTestData.password.name, "wrong_p@ssw0rd"),
     ],
 )
 def test_cannot_login_with_wrong_credentials(
     app: FastAPI,
-    user_data: dict,
     user: UserInDB,
     client: TestClient,
     credentials_field: str,
@@ -22,8 +22,8 @@ def test_cannot_login_with_wrong_credentials(
 ):
     login_json = {
         "user_in_login": {
-            "email": user_data["email"],
-            "password": user_data["password"],
+            UserTestData.email.name: UserTestData.email.value,
+            UserTestData.password.name: UserTestData.password.value,
         }
     }
     login_json["user_in_login"].update({credentials_field: credentials_value})

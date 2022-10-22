@@ -40,10 +40,9 @@ def test_cannot_register_with_existing_field(
 def test_can_register(
     app: FastAPI,
     user_data: dict,
+    user_teardown: None,
     client: TestClient,
 ):
-    # todo teardown user
-
     register_json = {"user_in_create": user_data}
     print(f"register_json: {register_json}")
     response = client.post(

@@ -37,5 +37,11 @@ class UserInDB(User):
     salt: bytes
     hashed_password: bytes
 
+    def __repr__(self):
+        return (
+            f"UserInDB(user_id={self.user_id!r}, email={self.email!r}, username={self.username!r}, "
+            f"salt={self.salt!r}, hashed_password={self.hashed_password!r})"
+        )
+
     class Config:
         orm_mode = True
