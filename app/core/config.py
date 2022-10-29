@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     DB_CONNECTION_STRING = secrets["rds_connection_string"]
 
     # JWT authentication config
-    JWT_TOKEN_PREFIX = "Token"
+    JWT_TOKEN_PREFIX = "Bearer"
     JWT_SUBJECT = "access"
     ALGORITHM = "HS256"
     JWT_SECRET_KEY = secrets["jwt_secret_key"]

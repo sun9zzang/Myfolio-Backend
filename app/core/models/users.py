@@ -1,6 +1,6 @@
 import bcrypt
-from sqlalchemy import Column, String, Integer
-from sqlalchemy.dialects.mysql import BINARY
+from sqlalchemy import Column, String
+from sqlalchemy.dialects.mysql import BINARY, INTEGER
 
 from app.core.models.base_generate import Base
 
@@ -8,7 +8,7 @@ from app.core.models.base_generate import Base
 class TblUsers(Base):
     __tablename__ = "users"
 
-    user_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
     email = Column(String(320), index=True, nullable=False, unique=True)
     username = Column(String(32), index=True, nullable=False, unique=True)
     salt = Column(BINARY(29), nullable=False)

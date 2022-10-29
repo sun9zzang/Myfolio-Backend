@@ -17,7 +17,7 @@ router = APIRouter()
     status_code=status.HTTP_200_OK,
 )
 async def login(
-    user_in_login: UserInLogin = Body(..., embed=True),
+    user_in_login: UserInLogin = Body(...),
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
 ):
     login_error = HTTPException(

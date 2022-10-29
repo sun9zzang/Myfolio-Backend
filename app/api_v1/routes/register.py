@@ -14,7 +14,7 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
 )
 async def register(
-    user_in_create: UserInCreate = Body(..., embed=True),
+    user_in_create: UserInCreate = Body(...),
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
 ):
     # validate user.email

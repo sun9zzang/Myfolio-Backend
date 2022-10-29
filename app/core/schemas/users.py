@@ -9,6 +9,9 @@ class UserBase(BaseModel):
 class User(UserBase):
     user_id: int
 
+    def __repr__(self):
+        return f"User(user_id={self.user_id!r}, email={self.email!r}, username={self.username!r})"
+
 
 class UserInCreate(UserBase):
     password: str
@@ -23,14 +26,6 @@ class UserInUpdate(User):
 class UserInLogin(BaseModel):
     email: str
     password: str
-
-
-class UserWithToken(User):
-    token: str
-
-
-class UserInResponse(BaseModel):
-    user: UserWithToken
 
 
 class UserInDB(User):

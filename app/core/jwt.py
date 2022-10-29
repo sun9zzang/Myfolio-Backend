@@ -4,8 +4,8 @@ import jwt
 from pydantic import ValidationError
 
 from app.core.config import settings
-from app.core.schemas.jwt import JWTUser, JWTMetadata
-from app.core.schemas.users import UserInDB
+from app.core.schemas.jwt import JWTMetadata
+from app.core.schemas.users import User, UserInDB
 
 
 def create_jwt_token(
@@ -24,7 +24,7 @@ def create_access_token_for_user(
     user_in_db: UserInDB,
 ) -> str:
     return create_jwt_token(
-        jwt_content=JWTUser(
+        jwt_content=User(
             user_id=user_in_db.user_id,
             email=user_in_db.email,
             username=user_in_db.username,
@@ -34,9 +34,9 @@ def create_access_token_for_user(
     )
 
 
-def get_user_id_from_token(token: str) -> int:
+def get_user_from_token(token: str) -> User:
     try:
-        return JWTUser(**jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.ALGORITHM])).user_id
+        return User(**jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.ALGORITHM]))
     except jwt.PyJWTError as decode_error:
         raise ValueError("unable to decode JWT token") from decode_error
     except ValidationError as validation_error:

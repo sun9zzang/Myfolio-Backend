@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.core.schemas.users import UserInCreate, UserInDB
+from app.core.config import settings
 from app.core import jwt
 from app.db.repositories.users import UsersRepository
 from app.db.errors import EntityDoesNotExist
@@ -87,7 +88,7 @@ def token(user: UserInDB) -> str:
 
 @pytest.fixture
 def authorized_client(client: TestClient, token: str) -> TestClient:
-    header = {"Authorization": token}
+    header = {"Authorization": f"{settings.JWT_TOKEN_PREFIX} {token}"}
     print(f"authorization header is created - header={header!r}")
     client.headers.update(header)
     print(f"client authorized - client={client!r}")
