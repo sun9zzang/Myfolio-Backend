@@ -70,7 +70,7 @@ def user_teardown(users_repo: UsersRepository) -> None:
     except EntityDoesNotExist:
         raise UserExistenceError(f"user with email={UserTestData.email.value!r} does not exists")
     else:
-        users_repo.withdraw_user(user_in_db.user_id)
+        users_repo.delete_user(user_in_db.user_id)
         print(f"TEARDOWN user withdrew - user_id={user_in_db.user_id!r}")
 
 

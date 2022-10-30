@@ -1,7 +1,9 @@
+from typing import Optional
+
 from sqlalchemy import select
 
 from app.core.models.users import TblUsers
-from app.core.schemas.users import UserInDB, UserInCreate, UserInUpdate, UserInLogin
+from app.core.schemas.users import UserInDB, UserInCreate, UserInUpdate
 from app.db.repositories.base import BaseRepository
 from app.db.errors import EntityDoesNotExist
 
@@ -16,7 +18,7 @@ class UsersRepository(BaseRepository):
             else:
                 raise EntityDoesNotExist
 
-    def _get_user_model_by_email(self, email: str) -> TblUsers | None:
+    def _get_user_model_by_email(self, email: str) -> Optional[TblUsers]:
         with self.get_session() as session:
             query = select(TblUsers).where(TblUsers.email == email)
             user = session.scalars(query).first()
@@ -51,7 +53,7 @@ class UsersRepository(BaseRepository):
             else:
                 return False
 
-    def _get_user_model_by_username(self, username: str) -> TblUsers | None:
+    def _get_user_model_by_username(self, username: str) -> Optional[TblUsers]:
         with self.get_session() as session:
             query = select(TblUsers).where(TblUsers.username == username)
             user = session.scalars(query).first()
@@ -62,14 +64,6 @@ class UsersRepository(BaseRepository):
         user = self._get_user_model_by_username(username)
 
         if user is not None:
-            return UserInDB.from_orm(user)
-        else:
-            raise EntityDoesNotExist
-
-    def validate_login(self, user_in_login: UserInLogin) -> UserInDB:
-        user = self._get_user_model_by_email(user_in_login.email)
-
-        if user is not None and user.check_password(user_in_login.password):
             return UserInDB.from_orm(user)
         else:
             raise EntityDoesNotExist
@@ -100,7 +94,7 @@ class UsersRepository(BaseRepository):
 
             return UserInDB.from_orm(user)
 
-    def withdraw_user(self, user_id: int) -> None:
+    def delete_user(self, user_id: int) -> None:
         with self.get_session() as session:
             user = session.get(TblUsers, user_id)
 

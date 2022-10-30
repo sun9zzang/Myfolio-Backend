@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Optional
 
 from fastapi import Depends, Security, HTTPException, status
 from fastapi.security import APIKeyHeader
@@ -13,13 +13,18 @@ from app.dependencies.repositories import get_repository
 HEADER_KEY = "Authorization"
 
 
-def get_current_user_authorizer() -> Callable:
-    return _get_current_user
+def get_current_user_authorizer() -> Callable[[], UserInDB]:
+    return get_current_user
 
 
 def _get_authorization_header(
-    api_key: str = Security(APIKeyHeader(name=HEADER_KEY, auto_error=False)),
+    api_key: Optional[str] = Security(APIKeyHeader(name=HEADER_KEY, auto_error=False)),
 ) -> str:
+    if api_key is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=strings.HTTP_401_UNAUTHORIZED_ERROR,
+        )
     try:
         token_prefix, token = api_key.split(" ")
     except (AttributeError, ValueError):
@@ -37,16 +42,20 @@ def _get_authorization_header(
     return token
 
 
-def _get_current_user(
+def _get_authorization_header_retriever() -> Callable[[], str]:
+    return _get_authorization_header
+
+
+def get_current_user(
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
-    token: str = _get_authorization_header(),
+    token: str = Depends(_get_authorization_header_retriever()),
 ) -> UserInDB:
     try:
         user = jwt.get_user_from_token(token)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=strings.FORBIDDEN_ERROR,
+            detail=strings.HTTP_403_FORBIDDEN_ERROR,
         )
 
     try:
@@ -54,5 +63,5 @@ def _get_current_user(
     except EntityDoesNotExist:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=strings.FORBIDDEN_ERROR,
+            detail=strings.HTTP_403_FORBIDDEN_ERROR,
         )

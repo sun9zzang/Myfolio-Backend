@@ -108,7 +108,7 @@ class TestAuthUserHead:
         ), "HTTP response status code가 401 Unauthorized여야 합니다."
         assert response.json() == {
             "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.UNAUTHORIZED_ERROR,
+            "detail": strings.HTTP_401_UNAUTHORIZED_ERROR,
         }, "에러 정보가 일치해야 합니다."
 
     @pytest.mark.parametrize(
@@ -131,7 +131,7 @@ class TestAuthUserHead:
         assert response.status_code == status.HTTP_403_FORBIDDEN, "HTTP response status code가 403 Forbidden이어야 합니다."
         assert response.json() == {
             "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.FORBIDDEN_ERROR,
+            "detail": strings.HTTP_403_FORBIDDEN_ERROR,
         }, "에러 정보가 일치해야 합니다."
 
     @pytest.mark.parametrize(
@@ -155,7 +155,7 @@ class TestAuthUserHead:
         assert response.status_code == status.HTTP_403_FORBIDDEN, "HTTP response status code가 403 Forbidden이어야 합니다."
         assert response.json() == {
             "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.FORBIDDEN_ERROR,
+            "detail": strings.HTTP_403_FORBIDDEN_ERROR,
         }, "에러 정보가 일치해야 합니다."
 
     def test_cannot_retrieve_user_with_expired_token(
@@ -180,7 +180,7 @@ class TestAuthUserHead:
         assert response.status_code == status.HTTP_403_FORBIDDEN, "HTTP response status code가 403 Forbidden이어야 합니다."
         assert response.json() == {
             "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.FORBIDDEN_ERROR,
+            "detail": strings.HTTP_403_FORBIDDEN_ERROR,
         }, "에러 정보가 일치해야 합니다."
 
     def test_can_retrieve_user_with_token(
@@ -212,7 +212,7 @@ class TestAuthTokenHead:
         ), "HTTP response status code가 401 Unauthorized여야 합니다."
         assert response.json() == {
             "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.UNAUTHORIZED_ERROR,
+            "detail": strings.HTTP_401_UNAUTHORIZED_ERROR,
         }, "에러 정보가 일치해야 합니다."
 
     @pytest.mark.parametrize(
@@ -235,7 +235,7 @@ class TestAuthTokenHead:
         assert response.status_code == status.HTTP_403_FORBIDDEN, "HTTP response status code가 403 Forbidden이어야 합니다."
         assert response.json() == {
             "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.UNAUTHORIZED_ERROR,
+            "detail": strings.HTTP_401_UNAUTHORIZED_ERROR,
         }
 
     @pytest.mark.parametrize(
@@ -259,7 +259,7 @@ class TestAuthTokenHead:
         assert response.status_code == status.HTTP_403_FORBIDDEN, "HTTP response status code가 403 Forbidden이어야 합니다."
         assert response.json() == {
             "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.UNAUTHORIZED_ERROR,
+            "detail": strings.HTTP_401_UNAUTHORIZED_ERROR,
         }
 
     def test_cannot_renew_token_with_expired_token(
@@ -284,7 +284,7 @@ class TestAuthTokenHead:
         assert response.status_code == status.HTTP_403_FORBIDDEN, "HTTP response status code가 403 Forbidden이어야 합니다."
         assert response.json() == {
             "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.UNAUTHORIZED_ERROR,
+            "detail": strings.HTTP_401_UNAUTHORIZED_ERROR,
         }
 
     def test_can_renew_token(

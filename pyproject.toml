@@ -6,7 +6,7 @@ authors = ["sun9zzang <sun9nyy@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "~3.9"
 fastapi = "^0.85.1"
 sqlalchemy = "^1.4.42"
 pyjwt = "^2.6.0"
@@ -17,6 +17,7 @@ boto3 = "^1.24.94"
 pytest-asyncio = "^0.19.0"
 pymysql = "^1.0.2"
 uvicorn = "^0.19.0"
+mangum = "^0.16.0"
 
 
 [build-system]

@@ -178,6 +178,17 @@ optional = false
 python-versions = ">=3.7"
 
 [[package]]
+name = "mangum"
+version = "0.16.0"
+description = "AWS Lambda support for ASGI applications"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+typing-extensions = "*"
+
+[[package]]
 name = "packaging"
 version = "21.3"
 description = "Core utilities for Python packages"
@@ -404,6 +415,7 @@ python-versions = ">=3.7"
 
 [package.dependencies]
 anyio = ">=3.4.0,<5"
+typing-extensions = {version = ">=3.10.0", markers = "python_version < \"3.10\""}
 
 [package.extras]
 full = ["itsdangerous", "jinja2", "python-multipart", "pyyaml", "requests"]
@@ -454,8 +466,8 @@ standard = ["colorama (>=0.4)", "httptools (>=0.5.0)", "python-dotenv (>=0.13)",
 
 [metadata]
 lock-version = "1.1"
-python-versions = "^3.10"
-content-hash = "2c620423cccecabaff255cb6a530605302ba2d4b921a604ac2ef3d7e4e55d779"
+python-versions = "~3.9"
+content-hash = "6f34096464433229185ac94e9efbccab2e93f03d0004a1ef17eb068bb2eaf7d4"
 
 [metadata.files]
 anyio = [
@@ -600,6 +612,10 @@ iniconfig = [
 jmespath = [
     {file = "jmespath-1.0.1-py3-none-any.whl", hash = "sha256:02e2e4cc71b5bcab88332eebf907519190dd9e6e82107fa7f83b1003a6252980"},
     {file = "jmespath-1.0.1.tar.gz", hash = "sha256:90261b206d6defd58fdd5e85f478bf633a2901798906be2ad389150c5c60edbe"},
+]
+mangum = [
+    {file = "mangum-0.16.0-py3-none-any.whl", hash = "sha256:c687724d10504ae2570733a14b939479454268094309c596ef6cc1710e5029b0"},
+    {file = "mangum-0.16.0.tar.gz", hash = "sha256:afdf3799797696d849870ede07d4aedadb2df815019b1f469d3cabe45fb8e42e"},
 ]
 packaging = [
     {file = "packaging-21.3-py3-none-any.whl", hash = "sha256:ef103e05f519cdc783ae24ea4e2e0f508a9c99b2d4969652eed6a2e1ea5bd522"},

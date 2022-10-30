@@ -66,5 +66,9 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY = secrets["jwt_secret_key"]
     ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+    # validation regex
+    EMAIL_MAX_LENGTH = 254
+    EMAIL_REGEX = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+
 
 settings = Settings()
