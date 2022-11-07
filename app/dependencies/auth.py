@@ -25,18 +25,19 @@ def _get_authorization_header(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=strings.HTTP_401_UNAUTHORIZED_ERROR,
         )
+
     try:
         token_prefix, token = api_key.split(" ")
     except (AttributeError, ValueError):
-        raise HTTPException(  # todo custom error & error handler
+        raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Wrong token prefix",
+            detail=strings.HTTP_403_FORBIDDEN_ERROR,
         )
 
     if token_prefix != settings.JWT_TOKEN_PREFIX:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Wrong token prefix",
+            detail=strings.HTTP_403_FORBIDDEN_ERROR,
         )
 
     return token
@@ -47,8 +48,8 @@ def _get_authorization_header_retriever() -> Callable[[], str]:
 
 
 def get_current_user(
-    users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
     token: str = Depends(_get_authorization_header_retriever()),
+    users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
 ) -> UserInDB:
     try:
         user = jwt.get_user_from_token(token)
