@@ -15,6 +15,16 @@ router = APIRouter()
     "/login",
     name="auth:login",
     status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "content": {"application/json": {}},
+            "description": "user와 token을 반환합니다.",
+        },
+        status.HTTP_400_BAD_REQUEST: {
+            "content": {"application/json": {}},
+            "description": "로그인에 실패 시 에러를 반환합니다.",
+        },
+    },
 )
 async def login(
     user_in_login: UserInLogin = Body(...),
@@ -49,6 +59,20 @@ async def login(
     name="auth:retrieve_user_from_token",
     response_model=User,
     status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "content": {"application/json": {}},
+            "description": "인증 성공 시 user를 반환합니다.",
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            "content": {"application/json": {}},
+            "description": "인증 정보가 없을 경우 에러를 반환합니다.",
+        },
+        status.HTTP_403_FORBIDDEN: {
+            "content": {"application/json": {}},
+            "description": "인증 정보가 잘못된 경우 에러를 반환합니다.",
+        },
+    },
 )
 async def get_user_from_token(
     current_user: UserInDB = Depends(get_current_user_authorizer()),
@@ -60,6 +84,20 @@ async def get_user_from_token(
     "/renew-token",
     name="auth:renew_token",
     status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "content": {"application/json": {}},
+            "description": "인증 성공 시 새로 발급된 token을 반환합니다.",
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            "content": {"application/json": {}},
+            "description": "인증 정보가 없을 경우 에러를 반환합니다.",
+        },
+        status.HTTP_403_FORBIDDEN: {
+            "content": {"application/json": {}},
+            "description": "인증 정보가 잘못된 경우 에러를 반환합니다.",
+        },
+    },
 )
 async def renew_token(
     current_user: UserInDB = Depends(get_current_user_authorizer()),

@@ -1,16 +1,16 @@
 from fastapi import FastAPI
 from fastapi.exceptions import HTTPException, RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import ORJSONResponse
 # from starlette.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
-from app.api_v1.api import router
-from app.api_v1.errors.handlers import http_error_hander, http_validation_error_handler
+from api.v1.api import router
+from api.v1.errors.handlers import http_error_hander, http_validation_error_handler
 
 
 def get_application() -> FastAPI:
 
-    application = FastAPI(default_response_class=JSONResponse)
+    application = FastAPI(default_response_class=ORJSONResponse)
 
     application.include_router(router, prefix="/v1")
 
