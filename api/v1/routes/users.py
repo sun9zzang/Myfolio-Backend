@@ -3,6 +3,7 @@ from fastapi.responses import Response
 from fastapi.exceptions import HTTPException
 
 from app.core.schemas.users import User, UserInCreate, UserInUpdate
+from app.core.schemas.errors import Error
 from app.core import strings, jwt, utils
 from app.db.errors import EntityDoesNotExist
 from app.db.repositories.users import UsersRepository
@@ -36,48 +37,52 @@ async def create_user(
     validation_flags = {}
     for key in user_in_create.dict().keys():
         validation_flags.update({key: {"is_valid": False, "is_unique": False}})
+    errors = []
 
     # validate email
     if utils.validate_email(user_in_create.email):
-        validation_flags["email"]["is_valid"] = True
-    if not users_repo.email_exists(user_in_create.email):
-        validation_flags["email"]["is_unique"] = True
+        errors.append(
+            Error(
+                type=strings.ErrorTypes.invalid_request_error.value,
+                message=strings.INVALID_EMAIL_ERROR_10,
+                code=10,  # todo enum
+            )
+        )
+    elif not users_repo.email_exists(user_in_create.email):
+        errors.append(
+            Error(
+                type=strings.ErrorTypes.invalid_request_error.value,
+                message=strings.DUPLICATED_EMAIL_ERROR_11,
+                code=11,
+            )
+        )
 
     # validate username
     if utils.validate_username(user_in_create.username):
-        validation_flags["username"]["is_valid"] = True
-    if not users_repo.username_exists(user_in_create.username):
-        validation_flags["username"]["is_unique"] = True
-
-    validation_flags["password"]["is_unique"] = True
-    if utils.validate_password(user_in_create.password):
-        validation_flags["password"]["is_valid"] = True
-
-    invalid_field_str = []
-    duplicated_field_str = []
-    error_detail = ""
-
-    for key, value in validation_flags.items():
-        if not value["is_valid"]:
-            invalid_field_str.append(key)
-        if not value["is_unique"]:
-            duplicated_field_str.append(key)
-
-    if invalid_field_str:
-        if duplicated_field_str:
-            error_detail = (
-                f"유효한 {', '.join(invalid_field_str)}이(가) 아닙니다. "
-                f"또한 {', '.join(duplicated_field_str)}이(가) 이미 존재합니다."
+        errors.append(
+            Error(
+                type=strings.ErrorTypes.invalid_request_error.value,
+                message=strings.INVALID_USERNAME_ERROR_20,
+                code=20,
             )
-        else:
-            error_detail = f"유효한 {', '.join(invalid_field_str)}이(가) 아닙니다."
-    elif duplicated_field_str:
-        error_detail = f"{', '.join(duplicated_field_str)}이(가) 이미 존재합니다."
+        )
+    elif not users_repo.username_exists(user_in_create.username):
+        errors.append(
+            Error(
+                type=strings.ErrorTypes.invalid_request_error.value,
+                message=strings.DUPLICATED_USERNAME_ERROR_21,
+                code=21,
+            )
+        )
 
-    if error_detail:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=error_detail,
+    # validate password
+    if utils.validate_password(user_in_create.password):
+        errors.append(
+            Error(
+                type=strings.ErrorTypes.invalid_request_error.value,
+                message=strings.INVALID_PASSWORD_ERROR_30,
+                code=30,
+            )
         )
 
     user_in_db = users_repo.create_user(user_in_create)
