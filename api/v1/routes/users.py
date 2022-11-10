@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Body, Depends, status
 from fastapi.responses import Response
-from fastapi.exceptions import HTTPException
+# from fastapi.exceptions import HTTPException
 
-from app.core.schemas.users import User, UserInCreate, UserInUpdate
-from app.core.schemas.errors import Error
-from app.core import strings, jwt, utils
+from app.core.schemas.users import User, UserInCreate, UserInUpdate, UserWithToken
+from app.core.schemas.errors import Error, ErrorList
+from app.core.schemas.responses import ResponseSchemaV1
+from app.core.exceptions import HTTPException
+from app.core.strings import ErrorStrings
+from app.core import jwt, utils
 from app.db.errors import EntityDoesNotExist
 from app.db.repositories.users import UsersRepository
 from app.dependencies.auth import get_current_user_authorizer
@@ -17,109 +20,93 @@ router = APIRouter()
 @router.post(
     "",
     name="users:create_user",
-    response_model=User,
     status_code=status.HTTP_201_CREATED,
-    responses={
-        status.HTTP_201_CREATED: {
-            "content": {"application/json": {}},
-            "description": "요청 성공 시 user를 반환합니다.",
-        },
-        status.HTTP_400_BAD_REQUEST: {
-            "content": {"application/json": {}},
-            "description": "유효하지 않은 필드 입력으로 요청 실패 시 에러를 반환합니다.",
-        },
-    },
+    responses=ResponseSchemaV1.Users.CREATE_USER,
 )
 async def create_user(
     user_in_create: UserInCreate = Body(...),
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
 ):
-    validation_flags = {}
-    for key in user_in_create.dict().keys():
-        validation_flags.update({key: {"is_valid": False, "is_unique": False}})
-    errors = []
+    error_list = ErrorList()
 
     # validate email
-    if utils.validate_email(user_in_create.email):
-        errors.append(
+    if not utils.validate_email(user_in_create.email):
+        error_list.append(
             Error(
-                type=strings.ErrorTypes.invalid_request_error.value,
-                message=strings.INVALID_EMAIL_ERROR_10,
-                code=10,  # todo enum
+                message=ErrorStrings.invalid_email.value,
+                code=ErrorStrings.invalid_email.name,
             )
         )
-    elif not users_repo.email_exists(user_in_create.email):
-        errors.append(
+    elif users_repo.email_exists(user_in_create.email):
+        error_list.append(
             Error(
-                type=strings.ErrorTypes.invalid_request_error.value,
-                message=strings.DUPLICATED_EMAIL_ERROR_11,
-                code=11,
+                message=ErrorStrings.duplicated_email.value,
+                code=ErrorStrings.duplicated_email.name,
             )
         )
 
     # validate username
-    if utils.validate_username(user_in_create.username):
-        errors.append(
+    if not utils.validate_username(user_in_create.username):
+        error_list.append(
             Error(
-                type=strings.ErrorTypes.invalid_request_error.value,
-                message=strings.INVALID_USERNAME_ERROR_20,
-                code=20,
+                message=ErrorStrings.invalid_username.value,
+                code=ErrorStrings.invalid_username.name,
             )
         )
-    elif not users_repo.username_exists(user_in_create.username):
-        errors.append(
+    elif users_repo.username_exists(user_in_create.username):
+        error_list.append(
             Error(
-                type=strings.ErrorTypes.invalid_request_error.value,
-                message=strings.DUPLICATED_USERNAME_ERROR_21,
-                code=21,
+                message=ErrorStrings.duplicated_username.value,
+                code=ErrorStrings.duplicated_username.name,
             )
         )
 
     # validate password
-    if utils.validate_password(user_in_create.password):
-        errors.append(
+    if not utils.validate_password(user_in_create.password):
+        error_list.append(
             Error(
-                type=strings.ErrorTypes.invalid_request_error.value,
-                message=strings.INVALID_PASSWORD_ERROR_30,
-                code=30,
+                message=ErrorStrings.invalid_password.value,
+                code=ErrorStrings.invalid_password.name,
             )
+        )
+
+    if error_list.errors:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, errors=error_list
         )
 
     user_in_db = users_repo.create_user(user_in_create)
     token = jwt.create_access_token_for_user(user_in_db)
 
-    return {
-        "user": User(**user_in_db.dict()).dict(),
-        "token": token,
-    }
+    return UserWithToken(
+        user=User(**user_in_db.dict(exclude={"salt", "hashed_password"})),
+        token=token,
+    )
 
 
 @router.get(
     "/{user_id}",
     name="users:retrieve_user",
-    response_model=User,
     status_code=status.HTTP_200_OK,
-    responses={
-        status.HTTP_200_OK: {
-            "content": {"application/json": {}},
-            "description": "요청 성공 시 user를 반환합니다.",
-        },
-        status.HTTP_400_BAD_REQUEST: {
-            "content": {"application/json": {}},
-            "description": "요청 실패 시 에러를 반환합니다.",
-        },
-    },
+    responses=ResponseSchemaV1.Users.RETRIEVE_USER,
 )
 async def retrieve_user(
     user_id: int,
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
 ):
+    error_list = ErrorList()
+
     try:
         user_in_db = users_repo.get_user_by_user_id(user_id)
     except EntityDoesNotExist:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="유효한 user_id가 아닙니다.",
+            errors=error_list.append(
+                Error(
+                    message=ErrorStrings.user_not_found.value,
+                    code=ErrorStrings.user_not_found.name,
+                ),
+            ),
         )
 
     return User(**user_in_db.dict(exclude={"salt", "hashed_password"}))
@@ -128,42 +115,27 @@ async def retrieve_user(
 @router.patch(
     "",
     name="users:update_user",
-    response_model=User,
     status_code=status.HTTP_200_OK,
-    responses={
-        status.HTTP_200_OK: {
-            "content": {"application/json": {}},
-            "description": "요청 성공 시 user를 반환합니다.",
-        },
-        status.HTTP_400_BAD_REQUEST: {
-            "content": {"application/json": {}},
-            "description": "유효하지 않은 필드 입력으로 요청 실패 시 에러를 반환합니다.",
-        },
-        status.HTTP_401_UNAUTHORIZED: {
-            "content": {"application/json": {}},
-            "description": "인증 정보가 없을 경우 에러를 반환합니다.",
-        },
-        status.HTTP_403_FORBIDDEN: {
-            "content": {"application/json": {}},
-            "description": "인증 정보가 잘못된 경우 에러를 반환합니다.",
-        },
-    },
+    responses=ResponseSchemaV1.Users.UPDATE_USER,
 )
 async def update_user(
     user_in_update: UserInUpdate = Body(...),
     current_user: User = Depends(get_current_user_authorizer()),
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
 ):
+    error_list = ErrorList()
+
     # authorization
     if user_in_update.user_id != current_user.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=strings.HTTP_403_FORBIDDEN_ERROR,
+            errors=error_list.append(
+                Error(
+                    message=ErrorStrings.forbidden.value,
+                    code=ErrorStrings.forbidden.name,
+                ),
+            ),
         )
-
-    validation_flags = {}
-    for key in user_in_update.dict(exclude={"user_id"}, exclude_none=True).keys():
-        validation_flags.update({key: {"is_valid": False, "is_unique": False}})
 
     # input data가 모두 None일 시
     if (
@@ -173,54 +145,52 @@ async def update_user(
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=strings.HTTP_400_BAD_REQUEST,
+            errors=error_list.append(
+                Error(
+                    message=ErrorStrings.bad_request.value,
+                    code=ErrorStrings.bad_request.name,
+                ),
+            ),
         )
 
     # validate email
     if user_in_update.email is not None:
-        if utils.validate_email(user_in_update.email):
-            validation_flags["email"]["is_valid"] = True
-        if not users_repo.email_exists(user_in_update.email):
-            validation_flags["email"]["is_unique"] = True
+        if not utils.validate_email(user_in_update.email):
+            error_list.append(Error(
+                message=ErrorStrings.invalid_email.value,
+                code=ErrorStrings.invalid_email.name,
+            ))
+        elif users_repo.email_exists(user_in_update.email):
+            error_list.append(Error(
+                message=ErrorStrings.duplicated_email.value,
+                code=ErrorStrings.duplicated_email.name,
+            ))
 
     # validate username
     if user_in_update.username is not None:
-        if utils.validate_username(user_in_update.username):
-            validation_flags["username"]["is_valid"] = True
-        if not users_repo.username_exists(user_in_update.username):
-            validation_flags["username"]["is_unique"] = True
+        if not utils.validate_username(user_in_update.username):
+            error_list.append(Error(
+                message=ErrorStrings.invalid_username.value,
+                code=ErrorStrings.invalid_username.name,
+            ))
+        if users_repo.username_exists(user_in_update.username):
+            error_list.append(Error(
+                message=ErrorStrings.duplicated_username.value,
+                code=ErrorStrings.duplicated_username.name,
+            ))
 
     # validate password
     if user_in_update.password is not None:
-        validation_flags["password"]["is_unique"] = True
-        if utils.validate_password(user_in_update.password):
-            validation_flags["password"]["is_valid"] = True
+        if not utils.validate_password(user_in_update.password):
+            error_list.append(Error(
+                message=ErrorStrings.invalid_password.value,
+                code=ErrorStrings.invalid_password.name,
+            ))
 
-    invalid_field_str = []
-    duplicated_field_str = []
-    error_detail = ""
-
-    for key, value in validation_flags.items():
-        if not value["is_valid"]:
-            invalid_field_str.append(key)
-        if not value["is_unique"]:
-            duplicated_field_str.append(key)
-
-    if invalid_field_str:
-        if duplicated_field_str:
-            error_detail = (
-                f"유효한 {', '.join(invalid_field_str)}이(가) 아닙니다. "
-                f"또한 {', '.join(duplicated_field_str)}이(가) 이미 존재합니다."
-            )
-        else:
-            error_detail = f"유효한 {', '.join(invalid_field_str)}이(가) 아닙니다."
-    elif duplicated_field_str:
-        error_detail = f"{', '.join(duplicated_field_str)}이(가) 이미 존재합니다."
-
-    if error_detail:
+    if error_list.errors:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=error_detail,
+            errors=error_list,
         )
 
     user_in_db = users_repo.update_user(user_in_update)
@@ -232,43 +202,38 @@ async def update_user(
     "/{user_id}",
     name="users:delete_user",
     status_code=status.HTTP_204_NO_CONTENT,
-    responses={
-        status.HTTP_204_NO_CONTENT: {
-            "content": {"application/json": {}},
-            "description": "요청 성공 시 response body를 반환하지 않습니다.",
-        },
-        status.HTTP_400_BAD_REQUEST: {
-            "content": {"application/json": {}},
-            "description": "요청 실패 시 에러를 반환합니다.",
-        },
-        status.HTTP_401_UNAUTHORIZED: {
-            "content": {"application/json": {}},
-            "description": "인증 정보가 없을 경우 에러를 반환합니다.",
-        },
-        status.HTTP_403_FORBIDDEN: {
-            "content": {"application/json": {}},
-            "description": "인증 정보가 잘못된 경우 에러를 반환합니다.",
-        },
-    },
+    responses=ResponseSchemaV1.Users.DELETE_USER,
 )
 async def delete_user(
     user_id: int,
     current_user: User = Depends(get_current_user_authorizer()),
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
 ):
-    # authorization
+    error_list = ErrorList()
+
+    # Authorization
     if user_id != current_user.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=strings.HTTP_403_FORBIDDEN_ERROR,
+            errors=error_list.append(
+                Error(
+                    message=ErrorStrings.forbidden.value,
+                    code=ErrorStrings.forbidden.name,
+                ),
+            ),
         )
 
     try:
-        users_repo.delete_user(user_id)
+        users_repo.delete_user(current_user.user_id)
     except EntityDoesNotExist:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="유효한 user_id가 아닙니다.",
+            status_code=status.HTTP_404_NOT_FOUND,
+            errors=error_list.append(
+                Error(
+                    message=ErrorStrings.user_not_found.value,
+                    cone=ErrorStrings.user_not_found.name,
+                )
+            ),
         )
     else:
         return Response(status_code=status.HTTP_204_NO_CONTENT)

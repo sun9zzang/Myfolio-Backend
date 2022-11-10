@@ -9,8 +9,10 @@ class UserBase(BaseModel):
     username: str
 
 
-class User(UserBase):
+class User(BaseModel):
     user_id: int
+    email: str
+    username: str
 
     def __repr__(self):
         return f"User(user_id={self.user_id!r}, email={self.email!r}, username={self.username!r})"
