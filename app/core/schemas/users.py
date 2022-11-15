@@ -1,3 +1,6 @@
+import bcrypt
+from typing import Optional
+
 from pydantic import BaseModel
 
 
@@ -6,8 +9,10 @@ class UserBase(BaseModel):
     username: str
 
 
-class User(UserBase):
+class User(BaseModel):
     user_id: int
+    email: str
+    username: str
 
 
 class UserInCreate(UserBase):
@@ -15,9 +20,9 @@ class UserInCreate(UserBase):
 
 
 class UserInUpdate(User):
-    email: str | None = None
-    username: str | None = None
-    password: str | None = None
+    email: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
 
 
 class UserInLogin(BaseModel):
@@ -25,23 +30,25 @@ class UserInLogin(BaseModel):
     password: str
 
 
-class UserWithToken(User):
+class Token(BaseModel):
     token: str
 
 
-class UserInResponse(BaseModel):
-    user: UserWithToken
+class UserWithToken(BaseModel):
+    user: User
+    token: str
 
 
 class UserInDB(User):
     salt: bytes
     hashed_password: bytes
 
-    def __repr__(self):
-        return (
-            f"UserInDB(user_id={self.user_id!r}, email={self.email!r}, username={self.username!r}, "
-            f"salt={self.salt!r}, hashed_password={self.hashed_password!r})"
-        )
+    def check_password(self, password: str) -> bool:
+        return bcrypt.checkpw(password.encode("utf-8"), self.hashed_password)
+
+    def change_password(self, password: str) -> None:
+        self.salt = bcrypt.gensalt()
+        self.hashed_password = bcrypt.hashpw(password.encode("utf-8"), self.salt)
 
     class Config:
         orm_mode = True

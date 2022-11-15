@@ -1,0 +1,6 @@
+name: myfolio-handler-deployment
+description: deployment automation for myfolio-handler in AWS Lambda
+runtime:
+    name: python
+    options:
+        virtualenv: venv
