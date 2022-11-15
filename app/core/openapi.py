@@ -5,7 +5,8 @@ from fastapi.openapi.utils import get_openapi
 from pydantic import BaseModel
 
 from app.core.schemas.users import User, UserWithToken, Token
-from app.core.schemas.errors import ErrorList
+from app.core.schemas.templates import TemplatesResponse
+from app.core.schemas.errors import Error, ErrorList
 from app.core.errors.errors import ManagedErrors
 
 
@@ -28,6 +29,10 @@ def custom_openapi(app: FastAPI) -> dict:
                 {
                     "name": "Users",
                     "description": "유저 생성, 정보 가져오기, 업데이트, 삭제와 관련된 기능을 제공합니다.",
+                },
+                {
+                    "name": "Templates",
+                    "description": "템플릿 생성, 가져오기, 리스트 가져오기, 업데이트, 삭제와 관련된 기능을 제공합니다.",
                 },
             ],
             servers=app.servers,
@@ -75,6 +80,12 @@ def _get_schema(
     return result
 
 
+def _get_error_schema(
+    *errors: Error,
+) -> dict:
+    return {"errors": [error.dict() for error in errors]}
+
+
 class ExampleModelDatas:
 
     user = {"user_id": 1234567, "email": "myfolio@myfolio.com", "username": "myfolio"}
@@ -96,6 +107,24 @@ class ExampleModelDatas:
     token_renewed = {"token": "brandnewtoken<3"}
     user_with_token = {"user": user, **token}
 
+    templates_response = {
+        "templates": [{
+                "template_id": 12345,
+                "title": "awesome template 123",
+                "likes": 777,
+                "created_date": "2022-11-15T06:42:05.018903",
+                "user_id": 123456,
+            },
+            {
+                "template_id": 67890,
+                "title": "yummy",
+                "likes": 1004,
+                "created_date": "2022-11-15T06:42:05.721721",
+                "user_id": 1004,
+            },
+        ]
+    }
+
 
 class ResponseSchemaV1:
 
@@ -111,11 +140,7 @@ class ResponseSchemaV1:
             status.HTTP_400_BAD_REQUEST: _get_schema(
                 description="인증 정보가 유효하지 않아 로그인에 실패하여 에러를 반환합니다.",
                 model=ErrorList,
-                example={
-                    "errors": [
-                        ManagedErrors.invalid_credentials,
-                    ]
-                },
+                example=_get_error_schema(ManagedErrors.bad_request),
             ),
         }
 
@@ -128,11 +153,7 @@ class ResponseSchemaV1:
             status.HTTP_401_UNAUTHORIZED: _get_schema(
                 description="유저의 인증 정보가 유효하지 않아 에러를 반환합니다.",
                 model=ErrorList,
-                example={
-                    "errors": [
-                        ManagedErrors.unauthorized,
-                    ]
-                },
+                example=_get_error_schema(ManagedErrors.unauthorized),
             ),
         }
 
@@ -145,11 +166,7 @@ class ResponseSchemaV1:
             status.HTTP_401_UNAUTHORIZED: _get_schema(
                 description="유저의 인증 정보가 유효하지 않아 에러를 반환합니다.",
                 model=ErrorList,
-                example={
-                    "errors": [
-                        ManagedErrors.unauthorized,
-                    ]
-                },
+                example=_get_error_schema(ManagedErrors.unauthorized),
             ),
         }
 
@@ -163,12 +180,10 @@ class ResponseSchemaV1:
             status.HTTP_400_BAD_REQUEST: _get_schema(
                 description="요청한 필드 값이 유효하지 않거나 이미 존재해 에러를 반환합니다.",
                 model=ErrorList,
-                example={
-                    "errors": [
-                        ManagedErrors.duplicated_username,
-                        ManagedErrors.invalid_password,
-                    ]
-                },
+                example=_get_error_schema(
+                    ManagedErrors.duplicated_username,
+                    ManagedErrors.invalid_password,
+                ),
             ),
         }
 
@@ -181,20 +196,12 @@ class ResponseSchemaV1:
             status.HTTP_400_BAD_REQUEST: _get_schema(
                 description="요청 형식이 잘못되어 에러를 반환합니다.",
                 model=ErrorList,
-                example={
-                    "errors": [
-                        ManagedErrors.bad_request,
-                    ]
-                },
+                example=_get_error_schema(ManagedErrors.bad_request),
             ),
             status.HTTP_404_NOT_FOUND: _get_schema(
                 description="해당하는 유저를 찾을 수 없을 때 에러를 반환합니다.",
                 model=ErrorList,
-                example={
-                    "errors": [
-                        ManagedErrors.not_found,
-                    ]
-                },
+                example=_get_error_schema(ManagedErrors.not_found),
             ),
         }
 
@@ -207,30 +214,20 @@ class ResponseSchemaV1:
             status.HTTP_400_BAD_REQUEST: _get_schema(
                 description="요청한 필드 값이 유효하지 않거나 이미 존재해 에러를 반환합니다.",
                 model=ErrorList,
-                example={
-                    "errors": [
-                        ManagedErrors.duplicated_username,
-                        ManagedErrors.invalid_password,
-                    ]
-                },
+                example=_get_error_schema(
+                    ManagedErrors.duplicated_username,
+                    ManagedErrors.invalid_password,
+                ),
             ),
             status.HTTP_401_UNAUTHORIZED: _get_schema(
                 description="업데이트 대상 유저의 인증 정보가 유효하지 않아 에러를 반환합니다.",
                 model=ErrorList,
-                example={
-                    "errors": [
-                        ManagedErrors.unauthorized,
-                    ]
-                },
+                example=_get_error_schema(ManagedErrors.unauthorized),
             ),
             status.HTTP_403_FORBIDDEN: _get_schema(
                 description="업데이트 대상 유저와 인증된 유저가 달라 에러를 반환합니다.",
                 model=ErrorList,
-                example={
-                    "errors": [
-                        ManagedErrors.forbidden,
-                    ]
-                },
+                example=_get_error_schema(ManagedErrors.forbidden),
             ),
         }
 
@@ -241,19 +238,30 @@ class ResponseSchemaV1:
             status.HTTP_401_UNAUTHORIZED: _get_schema(
                 description="삭제 대상 유저의 인증 정보가 유효하지 않아 에러를 반환합니다.",
                 model=ErrorList,
-                example={
-                    "errors": [
-                        ManagedErrors.unauthorized,
-                    ]
-                },
+                example=_get_error_schema(ManagedErrors.unauthorized),
             ),
             status.HTTP_403_FORBIDDEN: _get_schema(
                 description="삭제 대상 유저와 인증된 유저가 달라 에러를 반환합니다.",
                 model=ErrorList,
-                example={
-                    "errors": [
-                        ManagedErrors.forbidden,
-                    ]
-                },
+                example=_get_error_schema(ManagedErrors.forbidden),
+            ),
+        }
+
+    class Templates:
+        RETRIEVE_TEMPLATES_LIST = {
+            status.HTTP_200_OK: _get_schema(
+                description="요청 성공 시 템플릿 리스트를 반환합니다.",
+                model=TemplatesResponse,
+                example=ExampleModelDatas.templates_response,
+            ),
+            status.HTTP_400_BAD_REQUEST: _get_schema(
+                description="요청한 쿼리 값이 유효하지 않으면 에러를 반환합니다.",
+                model=ErrorList,
+                example=_get_error_schema(ManagedErrors.bad_request),
+            ),
+            status.HTTP_404_NOT_FOUND: _get_schema(
+                description="요청한 리소스가 없어 반환할 리스트가 비어있으면 에러를 반환합니다.",
+                model=ErrorList,
+                example=_get_error_schema(ManagedErrors.not_found),
             ),
         }

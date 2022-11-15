@@ -62,6 +62,12 @@ class ManagedErrors:
         code="internal_server_error",
     )
 
+    # 501 Not Implemented
+    not_implemented = Error(
+        message="The request is not currently supported by the server",
+        code="not_implemented",
+    )
+
     # Basic managed errors for each HTTP response status code
     basic_error_responses = {
         status.HTTP_400_BAD_REQUEST: bad_request,
@@ -73,6 +79,7 @@ class ManagedErrors:
         status.HTTP_409_CONFLICT: conflict,
         status.HTTP_422_UNPROCESSABLE_ENTITY: unprocessable_entity,
         status.HTTP_500_INTERNAL_SERVER_ERROR: internal_server_error,
+        status.HTTP_501_NOT_IMPLEMENTED: not_implemented,
     }
 
     # [400] HTTP response status codes that can occur in the API's responses

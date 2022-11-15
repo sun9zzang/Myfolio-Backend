@@ -11,6 +11,7 @@ from app.core.errors.handlers import (
     http_exception_hander,
     request_validation_exception_handler,
     starlette_http_exception_handler,
+    not_implemented_error_handler,
 )
 from app.core.openapi import custom_openapi
 from app.core.exceptions import HTTPException
@@ -30,12 +31,17 @@ def get_application() -> FastAPI:
         allow_headers=["*"],
     )
 
-    application.add_exception_handler(HTTPException, http_exception_hander)
+    application.add_exception_handler(
+        HTTPException, http_exception_hander
+    )
     application.add_exception_handler(
         StarletteHTTPException, starlette_http_exception_handler
     )
     application.add_exception_handler(
         RequestValidationError, request_validation_exception_handler
+    )
+    application.add_exception_handler(
+        NotImplementedError, not_implemented_error_handler
     )
 
     application.openapi_schema = custom_openapi(application)

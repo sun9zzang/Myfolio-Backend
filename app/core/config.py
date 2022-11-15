@@ -51,13 +51,18 @@ def get_secret() -> dict:
 
 
 class Settings(BaseSettings):
+    # stage of application
     APP_ENV: str = "dev"
 
     # secrets stored in AWS Secrets Manager
     secrets: dict = get_secret()
 
-    # DB connection config
+    # DB connection settings
     DB_CONNECTION_STRING = secrets["rds_connection_string"]
+
+    # datetime precision
+    # 3 -> milliseconds, 6 -> microseconds
+    DATETIME_PRECISION = 6
 
     # JWT authentication config
     JWT_TOKEN_PREFIX = "Bearer"
@@ -66,9 +71,18 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY = secrets["jwt_secret_key"]
     ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-    # validation regex
+    # User settings
     EMAIL_MAX_LENGTH = 254
     EMAIL_REGEX = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    USERNAME_MIN_LENGTH = 2
+    USERNAME_MAX_LENGTH = 32
+
+    # Templates settings
+    DEFAULT_TEMPLATES_LIST_LIMIT = 20
+    TEMPLATES_MIN_LIST_LIMIT = 1
+    TEMPLATES_MAX_LIST_LIMIT = 100
+    TEMPLATE_TITLE_MIN_LENGTH = 2
+    TEMPLATE_TITLE_MAX_LENGTH = 50
 
 
 settings = Settings()

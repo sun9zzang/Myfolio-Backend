@@ -63,7 +63,7 @@ async def create_user(
     responses=ResponseSchemaV1.Users.RETRIEVE_USER,
 )
 async def retrieve_user(
-    user_id: int = Path(..., example=ExampleModelDatas.user_id),
+    user_id: int = Path(..., ge=1, example=ExampleModelDatas.user_id),
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
 ):
     try:
@@ -145,7 +145,7 @@ async def update_user(
     responses=ResponseSchemaV1.Users.DELETE_USER,
 )
 async def delete_user(
-    user_id: int = Path(..., example=ExampleModelDatas.user_id),
+    user_id: int = Path(..., ge=1, example=ExampleModelDatas.user_id),
     current_user: User = Depends(get_current_user_authorizer()),
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
 ):

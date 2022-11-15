@@ -34,7 +34,7 @@ async def starlette_http_exception_handler(
     req: Request, exc: StarletteHTTPException
 ) -> ORJSONResponse:
     try:
-        error = ManagedErrors.basic_error_responses[str(exc.status_code)]
+        error = ManagedErrors.basic_error_responses[exc.status_code]
     except KeyError:
         not_managed_exc = HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -47,3 +47,13 @@ async def starlette_http_exception_handler(
             errors=error,
         )
         return await http_exception_hander(req, managed_exc)
+
+
+async def not_implemented_error_handler(
+    req: Request, exc: NotImplementedError
+) -> ORJSONResponse:
+    not_found_exc = HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        errors=ManagedErrors.not_found,
+    )
+    return await http_exception_hander(req, not_found_exc)
