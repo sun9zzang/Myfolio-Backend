@@ -14,9 +14,6 @@ class User(BaseModel):
     email: str
     username: str
 
-    def __repr__(self):
-        return f"User(user_id={self.user_id!r}, email={self.email!r}, username={self.username!r})"
-
 
 class UserInCreate(UserBase):
     password: str
@@ -33,6 +30,10 @@ class UserInLogin(BaseModel):
     password: str
 
 
+class Token(BaseModel):
+    token: str
+
+
 class UserWithToken(BaseModel):
     user: User
     token: str
@@ -41,12 +42,6 @@ class UserWithToken(BaseModel):
 class UserInDB(User):
     salt: bytes
     hashed_password: bytes
-
-    def __repr__(self):
-        return (
-            f"UserInDB(user_id={self.user_id!r}, email={self.email!r}, username={self.username!r}, "
-            f"salt={self.salt!r}, hashed_password={self.hashed_password!r})"
-        )
 
     def check_password(self, password: str) -> bool:
         return bcrypt.checkpw(password.encode("utf-8"), self.hashed_password)

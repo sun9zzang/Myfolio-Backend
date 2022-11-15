@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.core import jwt
 from app.db.repositories.users import UsersRepository
 from app.db.errors import EntityDoesNotExist
+from app.dependencies.auth import AUTHORIZATION_HEADER_KEY
 from app.application import get_application
 
 
@@ -36,7 +37,7 @@ def client(app: FastAPI) -> TestClient:
 
 
 @pytest.fixture
-def user_data() -> dict:
+def user_dict() -> dict:
     # convert UserTestData to dict
     user_data = {i.name: i.value for i in UserTestData}
     return user_data
@@ -48,13 +49,18 @@ def users_repo() -> UsersRepository:
 
 
 @pytest.fixture
-def user_setup(user_data: dict, users_repo: UsersRepository) -> UserInDB:
-    if users_repo.email_exists(UserTestData.email.value):
-        raise UserExistenceError(f"user with email={UserTestData.email.value!r} already exists")
-    if users_repo.username_exists(UserTestData.username.value):
-        raise UserExistenceError(f"user with username={UserTestData.username.value!r} already exists")
+def user_setup(user_dict, users_repo: UsersRepository) -> UserInDB:
 
-    user_in_create = UserInCreate(**user_data)
+    if users_repo.email_exists(UserTestData.email.value):
+        raise UserExistenceError(
+            f"user with email={UserTestData.email.value!r} already exists"
+        )
+    if users_repo.username_exists(UserTestData.username.value):
+        raise UserExistenceError(
+            f"user with username={UserTestData.username.value!r} already exists"
+        )
+
+    user_in_create = UserInCreate(**user_dict)
     user_in_db = users_repo.create_user(user_in_create)
     print(f"SETUP user is created - user={user_in_db!r}")
 
@@ -63,15 +69,18 @@ def user_setup(user_data: dict, users_repo: UsersRepository) -> UserInDB:
 
 @pytest.fixture
 def user_teardown(users_repo: UsersRepository) -> None:
+
     yield
 
     try:
         user_in_db = users_repo.get_user_by_email(UserTestData.email.value)
     except EntityDoesNotExist:
-        raise UserExistenceError(f"user with email={UserTestData.email.value!r} does not exists")
+        raise UserExistenceError(
+            f"user with email={UserTestData.email.value} does not exists"
+        )
     else:
         users_repo.delete_user(user_in_db.user_id)
-        print(f"TEARDOWN user withdrew - user_id={user_in_db.user_id!r}")
+        print(f"TEARDOWN user withdrew - user_id={user_in_db.user_id}")
 
 
 @pytest.fixture
@@ -82,14 +91,19 @@ def user(user_setup: UserInDB, user_teardown: None) -> UserInDB:
 @pytest.fixture
 def token(user: UserInDB) -> str:
     token = jwt.create_access_token_for_user(user)
-    print(f"token generated for user with user_id={user.user_id!r} - token={token!r}")
+    print(f"token generated for user with user_id={user.user_id} - token={token}")
     return token
 
 
 @pytest.fixture
-def authorized_client(client: TestClient, token: str) -> TestClient:
-    header = {"Authorization": f"{settings.JWT_TOKEN_PREFIX} {token}"}
-    print(f"authorization header is created - header={header!r}")
+def authorization_header_key() -> str:
+    return AUTHORIZATION_HEADER_KEY
+
+
+@pytest.fixture
+def authorized_client(client: TestClient, token: str, authorization_header_key: str) -> TestClient:
+    header = {authorization_header_key: f"{settings.JWT_TOKEN_PREFIX} {token}"}
+    print(f"authorization header is created - header={header}")
     client.headers.update(header)
     print(f"client authorized - client={client!r}")
 

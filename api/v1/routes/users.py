@@ -1,12 +1,11 @@
-from fastapi import APIRouter, Body, Depends, status
+from fastapi import APIRouter, Body, Depends, status, Path
 from fastapi.responses import Response
-# from fastapi.exceptions import HTTPException
 
-from app.core.schemas.users import User, UserInCreate, UserInUpdate, UserWithToken
-from app.core.schemas.errors import Error, ErrorList
-from app.core.schemas.responses import ResponseSchemaV1
+from app.core.schemas.users import User, UserInCreate, UserInUpdate, UserWithToken, Token
+from app.core.schemas.errors import ErrorList
+from app.core.openapi import ResponseSchemaV1, ExampleModelDatas
 from app.core.exceptions import HTTPException
-from app.core.strings import ErrorStrings
+from app.core.errors.errors import ManagedErrors
 from app.core import jwt, utils
 from app.db.errors import EntityDoesNotExist
 from app.db.repositories.users import UsersRepository
@@ -24,56 +23,29 @@ router = APIRouter()
     responses=ResponseSchemaV1.Users.CREATE_USER,
 )
 async def create_user(
-    user_in_create: UserInCreate = Body(...),
+    user_in_create: UserInCreate = Body(..., example=ExampleModelDatas.user_in_create),
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
 ):
     error_list = ErrorList()
 
     # validate email
     if not utils.validate_email(user_in_create.email):
-        error_list.append(
-            Error(
-                message=ErrorStrings.invalid_email.value,
-                code=ErrorStrings.invalid_email.name,
-            )
-        )
+        error_list.append(ManagedErrors.invalid_email)
     elif users_repo.email_exists(user_in_create.email):
-        error_list.append(
-            Error(
-                message=ErrorStrings.duplicated_email.value,
-                code=ErrorStrings.duplicated_email.name,
-            )
-        )
+        error_list.append(ManagedErrors.duplicated_email)
 
     # validate username
     if not utils.validate_username(user_in_create.username):
-        error_list.append(
-            Error(
-                message=ErrorStrings.invalid_username.value,
-                code=ErrorStrings.invalid_username.name,
-            )
-        )
+        error_list.append(ManagedErrors.duplicated_username)
     elif users_repo.username_exists(user_in_create.username):
-        error_list.append(
-            Error(
-                message=ErrorStrings.duplicated_username.value,
-                code=ErrorStrings.duplicated_username.name,
-            )
-        )
+        error_list.append(ManagedErrors.duplicated_username)
 
     # validate password
     if not utils.validate_password(user_in_create.password):
-        error_list.append(
-            Error(
-                message=ErrorStrings.invalid_password.value,
-                code=ErrorStrings.invalid_password.name,
-            )
-        )
+        error_list.append(ManagedErrors.invalid_password)
 
     if error_list.errors:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, errors=error_list
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, errors=error_list)
 
     user_in_db = users_repo.create_user(user_in_create)
     token = jwt.create_access_token_for_user(user_in_db)
@@ -91,22 +63,15 @@ async def create_user(
     responses=ResponseSchemaV1.Users.RETRIEVE_USER,
 )
 async def retrieve_user(
-    user_id: int,
+    user_id: int = Path(..., example=ExampleModelDatas.user_id),
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
 ):
-    error_list = ErrorList()
-
     try:
         user_in_db = users_repo.get_user_by_user_id(user_id)
     except EntityDoesNotExist:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            errors=error_list.append(
-                Error(
-                    message=ErrorStrings.user_not_found.value,
-                    code=ErrorStrings.user_not_found.name,
-                ),
-            ),
+            status_code=status.HTTP_404_NOT_FOUND,
+            errors=ManagedErrors.not_found,
         )
 
     return User(**user_in_db.dict(exclude={"salt", "hashed_password"}))
@@ -119,22 +84,15 @@ async def retrieve_user(
     responses=ResponseSchemaV1.Users.UPDATE_USER,
 )
 async def update_user(
-    user_in_update: UserInUpdate = Body(...),
+    user_in_update: UserInUpdate = Body(..., example=ExampleModelDatas.user_in_update),
     current_user: User = Depends(get_current_user_authorizer()),
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
 ):
-    error_list = ErrorList()
-
     # authorization
     if user_in_update.user_id != current_user.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            errors=error_list.append(
-                Error(
-                    message=ErrorStrings.forbidden.value,
-                    code=ErrorStrings.forbidden.name,
-                ),
-            ),
+            errors=ManagedErrors.forbidden,
         )
 
     # input data가 모두 None일 시
@@ -145,47 +103,29 @@ async def update_user(
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            errors=error_list.append(
-                Error(
-                    message=ErrorStrings.bad_request.value,
-                    code=ErrorStrings.bad_request.name,
-                ),
-            ),
+            errors=ManagedErrors.bad_request,
         )
+
+    error_list = ErrorList()
 
     # validate email
     if user_in_update.email is not None:
         if not utils.validate_email(user_in_update.email):
-            error_list.append(Error(
-                message=ErrorStrings.invalid_email.value,
-                code=ErrorStrings.invalid_email.name,
-            ))
+            error_list.append(ManagedErrors.invalid_email)
         elif users_repo.email_exists(user_in_update.email):
-            error_list.append(Error(
-                message=ErrorStrings.duplicated_email.value,
-                code=ErrorStrings.duplicated_email.name,
-            ))
+            error_list.append(ManagedErrors.duplicated_email)
 
     # validate username
     if user_in_update.username is not None:
         if not utils.validate_username(user_in_update.username):
-            error_list.append(Error(
-                message=ErrorStrings.invalid_username.value,
-                code=ErrorStrings.invalid_username.name,
-            ))
-        if users_repo.username_exists(user_in_update.username):
-            error_list.append(Error(
-                message=ErrorStrings.duplicated_username.value,
-                code=ErrorStrings.duplicated_username.name,
-            ))
+            error_list.append(ManagedErrors.invalid_username)
+        elif users_repo.username_exists(user_in_update.username):
+            error_list.append(ManagedErrors.duplicated_username)
 
     # validate password
     if user_in_update.password is not None:
         if not utils.validate_password(user_in_update.password):
-            error_list.append(Error(
-                message=ErrorStrings.invalid_password.value,
-                code=ErrorStrings.invalid_password.name,
-            ))
+            error_list.append(ManagedErrors.invalid_password)
 
     if error_list.errors:
         raise HTTPException(
@@ -205,35 +145,23 @@ async def update_user(
     responses=ResponseSchemaV1.Users.DELETE_USER,
 )
 async def delete_user(
-    user_id: int,
+    user_id: int = Path(..., example=ExampleModelDatas.user_id),
     current_user: User = Depends(get_current_user_authorizer()),
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
 ):
-    error_list = ErrorList()
-
     # Authorization
     if user_id != current_user.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            errors=error_list.append(
-                Error(
-                    message=ErrorStrings.forbidden.value,
-                    code=ErrorStrings.forbidden.name,
-                ),
-            ),
+            errors=ManagedErrors.forbidden,
         )
 
     try:
         users_repo.delete_user(current_user.user_id)
     except EntityDoesNotExist:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            errors=error_list.append(
-                Error(
-                    message=ErrorStrings.user_not_found.value,
-                    cone=ErrorStrings.user_not_found.name,
-                )
-            ),
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            errors=ManagedErrors.unauthorized,
         )
-    else:
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

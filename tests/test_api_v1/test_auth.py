@@ -5,11 +5,13 @@ from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 
 from app.core.schemas.users import User, UserInDB
+from app.core.schemas.errors import ErrorList
+from app.core.errors.errors import ManagedErrors
 from app.core.config import settings
-from app.core import strings, jwt
+from app.core import jwt
 
 
-class _TestAuthHeaderData:
+class _TestParamData:
     invalid_tokens = [
         "iamnottoken",
         "youthinkiamrealtoken??",
@@ -24,16 +26,37 @@ class _TestAuthHeaderData:
     ]
 
 
+@pytest.fixture
+def expired_token(user: UserInDB) -> str:
+    # 1분 전에 만료된 토큰
+    return jwt.create_jwt_token(
+        jwt_content=User(**user.dict()).dict(),
+        secret_key=settings.JWT_SECRET_KEY,
+        expires_delta=timedelta(minutes=-1),
+    )
+
+
+@pytest.fixture(params=[*_TestParamData.invalid_tokens, expired_token])
+def invalid_token(request) -> str:
+    return request.params
+
+
+@pytest.fixture(params=_TestParamData.invalid_token_prefixes)
+def invalid_token_prefix(request) -> str:
+    return request.params
+
+
 # POST /v1/auth/login
 # 유저 로그인 API
-class TestAuthLoginPost:
+class TestV1AuthLoginPOST:
     @pytest.fixture
-    def login_json(self, user_data: dict) -> dict:
+    def login_json(self, user_dict) -> dict:
         return {
-            "email": user_data["email"],
-            "password": user_data["password"],
+            "email": user_dict["email"],
+            "password": user_dict["password"],
         }
 
+    # wrong credentials로 로그인 불가
     @pytest.mark.parametrize(
         "credential_item",
         [
@@ -51,250 +74,200 @@ class TestAuthLoginPost:
         credential_item: dict,
     ):
         login_json.update(credential_item)
-        print(f"login with login_json={login_json!r}")
-
+        print(f"attempting to login with login_json={login_json}")
         response = client.post(
             app.url_path_for("auth:login"),
             json=login_json,
         )
-        print(f"response body: {response.json()!r}")
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST, "HTTP response status code가 400 Bad Request여야 합니다."
-        assert response.json() == {
-            "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.WRONG_CREDENTIALS_ERROR,
-        }, "에러 정보가 일치해야 합니다."
+        assert (
+            response.status_code == status.HTTP_400_BAD_REQUEST
+        ), "HTTP response status code가 '400 Bad Request'여야 합니다."
+        assert response.json() == ErrorList().append(ManagedErrors.invalid_credentials).dict(),\
+            "Error code가 'invalid_credentials'여야 합니다."
 
+    # test user credentials로 로그인 가능
     def test_can_login(
         self,
         app: FastAPI,
         user: UserInDB,
+        user_dict: dict,
         client: TestClient,
         login_json: dict,
     ):
-        print(f"login with login_json={login_json!r}")
-
+        print(f"attempting to login with login_json={login_json}")
         response = client.post(
             app.url_path_for("auth:login"),
             json=login_json,
         )
-        print(f"response body: {response.json()!r}")
 
-        assert response.status_code == status.HTTP_200_OK, "HTTP response status code가 200 OK여야 합니다."
-        assert response.json()["user"] == {
-            "user_id": user.user_id,
-            "email": user.email,
-            "username": user.username,
-        }, "Response Body의 유저 object가 유효해야 합니다."
+        assert (
+            response.status_code == status.HTTP_200_OK
+        ), "HTTP response status code가 '200 OK'여야 합니다."
+        assert response.json()["user"] == user_dict, "Response Body의 user object가 유효해야 합니다."
 
         token_in_response = response.json()["token"]
-        user_in_response = jwt.get_user_from_token(token_in_response)
-        assert user_in_response == User(**user.dict()), "Response Body의 토큰이 유효해야 합니다."
+        user_from_token = jwt.get_user_from_token(token_in_response)
+        print(f"token_in_response: {token_in_response}")
+
+        assert user_from_token.dict() == user_dict, "발급된 토큰이 유효해야 합니다."
 
 
-# HEAD /v1/auth/user
+# GET /v1/auth/user-retriever
 # 토큰으로 유저 정보를 가져오는 API
-class TestAuthUserHead:
+class TestV1AuthUserRetrieverGET:
+
+    # Authorization header 없이 유저 정보 요청 불가
     def test_cannot_retrieve_user_without_authorization_header(
         self,
         app: FastAPI,
         client: TestClient,
     ):
-        response = client.head(app.url_path_for("auth:user"))
-        print(f"response body: {response.json()!r}")
+        print("attempting to retrieve user data without authorization header...")
+        response = client.get(app.url_path_for("auth:user-retriever"))
 
         assert (
             response.status_code == status.HTTP_401_UNAUTHORIZED
-        ), "HTTP response status code가 401 Unauthorized여야 합니다."
-        assert response.json() == {
-            "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.HTTP_401_UNAUTHORIZED_ERROR,
-        }, "에러 정보가 일치해야 합니다."
+        ), "HTTP response status code가 '401 Unauthorized'여야 합니다."
+        assert response.json() == ErrorList().append(ManagedErrors.unauthorized).dict(),\
+            "Error code가 'unauthorized'여야 합니다."
 
-    @pytest.mark.parametrize(
-        "invalid_token",
-        _TestAuthHeaderData.invalid_tokens,
-    )
+    # 유효하지 않은 토큰으로 유저 정보 요청 불가
     def test_cannot_retrieve_user_with_invalid_token(
         self,
         app: FastAPI,
         client: TestClient,
+        authorization_header_key: str,
         invalid_token: str,
     ):
-        header = {"Authorization": f"{settings.JWT_TOKEN_PREFIX} {invalid_token}"}
+        header = {authorization_header_key: f"{settings.JWT_TOKEN_PREFIX} {invalid_token}"}
         client.headers.update(header)
-        print(f"header with invalid token is appended - header={header!r}")
+        print(f"header with invalid token is appended to the request context - header={header}")
 
-        response = client.head(app.url_path_for("auth:user"))
-        print(f"response body: {response.json()!r}")
+        print("attempting to retrieve user data...")
+        response = client.get(app.url_path_for("auth:user-retriever"))
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN, "HTTP response status code가 403 Forbidden이어야 합니다."
-        assert response.json() == {
-            "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.HTTP_403_FORBIDDEN_ERROR,
-        }, "에러 정보가 일치해야 합니다."
+        assert (
+            response.status_code == status.HTTP_401_UNAUTHORIZED
+        ), "HTTP response status code가 '401 Unauthorized'여야 합니다."
+        assert response.json() == ErrorList().append(ManagedErrors.unauthorized).dict(),\
+            "Error code가 'unauthorized'여야 합니다."
 
-    @pytest.mark.parametrize(
-        "invalid_token_prefix",
-        _TestAuthHeaderData.invalid_token_prefixes,
-    )
+    # 유효하지 않은 token prefix로 유저 정보 요청 불가
     def test_cannot_retrieve_user_with_invalid_token_prefix(
         self,
         app: FastAPI,
-        token: str,
         client: TestClient,
+        token: str,
+        authorization_header_key: str,
         invalid_token_prefix: str,
     ):
-        header = {"Authorization": f"{invalid_token_prefix} {token}"}
+        header = {authorization_header_key: f"{invalid_token_prefix} {token}"}
         client.headers.update(header)
-        print(f"header with invalid token prefix is appended - header={header!r}")
+        print(f"header with invalid token prefix is appended to the request context - header={header}")
 
-        response = client.head(app.url_path_for("auth:user"))
-        print(f"response body: {response.json()!r}")
+        print("attempting to retrieve user data...")
+        response = client.get(app.url_path_for("auth:user-retriever"))
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN, "HTTP response status code가 403 Forbidden이어야 합니다."
-        assert response.json() == {
-            "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.HTTP_403_FORBIDDEN_ERROR,
-        }, "에러 정보가 일치해야 합니다."
+        assert (
+            response.status_code == status.HTTP_401_UNAUTHORIZED
+        ), "HTTP response status code가 '401 Unauthorized'여야 합니다."
+        assert response.json() == ErrorList().append(ManagedErrors.unauthorized).dict(),\
+            "Error code가 'unauthorized'여야 합니다."
 
-    def test_cannot_retrieve_user_with_expired_token(
-        self,
-        app: FastAPI,
-        user: UserInDB,
-        client: TestClient,
-    ):
-        # 1분 전에 만료된 토큰
-        expired_token = jwt.create_jwt_token(
-            jwt_content=User(**user.dict()).dict(),
-            secret_key=settings.JWT_SECRET_KEY,
-            expires_delta=timedelta(minutes=-1),
-        )
-        header = {"Authorization": f"{settings.JWT_TOKEN_PREFIX} {expired_token}"}
-        client.headers.update({"Authorization": f"{settings.JWT_TOKEN_PREFIX} {expired_token}"})
-        print(f"header with expired token is appended - header={header!r}")
-
-        response = client.head(app.url_path_for("auth:user"))
-        print(f"response body: {response.json()!r}")
-
-        assert response.status_code == status.HTTP_403_FORBIDDEN, "HTTP response status code가 403 Forbidden이어야 합니다."
-        assert response.json() == {
-            "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.HTTP_403_FORBIDDEN_ERROR,
-        }, "에러 정보가 일치해야 합니다."
-
+    # 유효한 토큰으로 유저 정보 요청 가능
     def test_can_retrieve_user_with_token(
         self,
         app: FastAPI,
-        token: str,
+        user_dict,
         authorized_client: TestClient,
     ):
-        response = authorized_client.head(app.url_path_for("auth:user"))
-        print(f"response body: {response.json()!r}")
+        print("attempting to retrieve user data...")
+        response = authorized_client.get(app.url_path_for("auth:user-retriever"))
 
-        assert response.status_code == status.HTTP_200_OK, "HTTP response status code가 200 OK여야 합니다."
-        assert response.json() == {"token": token}
+        assert (
+            response.status_code == status.HTTP_200_OK
+        ), "HTTP response status code가 '200 OK'여야 합니다."
+        assert response.json() == user_dict, "Response Body의 유저 정보가 유효해야 합니다."
 
 
-# HEAD /v1/auth/token
+# GET /v1/auth/renew-token
 # 기존 토큰을 새로운 토큰으로 갱신하는 API
-class TestAuthTokenHead:
+class TestV1AuthRenewTokenGET:
+
+    # Authorization header 없이 토큰 갱신 요청 불가
     def test_cannot_renew_token_without_authorization_header(
         self,
         app: FastAPI,
         client: TestClient,
     ):
-        response = client.head(app.url_path_for("auth:token"))
-        print(f"response body: {response.json()!r}")
+        print("attempting to renew token without authorization header...")
+        response = client.get(app.url_path_for("auth:renew-token"))
 
         assert (
             response.status_code == status.HTTP_401_UNAUTHORIZED
-        ), "HTTP response status code가 401 Unauthorized여야 합니다."
-        assert response.json() == {
-            "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.HTTP_401_UNAUTHORIZED_ERROR,
-        }, "에러 정보가 일치해야 합니다."
+        ), "HTTP response status code가 '401 Unauthorized'여야 합니다."
+        assert response.json() == ErrorList().append(ManagedErrors.unauthorized).dict(),\
+            "Error code가 'unauthorized'여야 합니다."
 
-    @pytest.mark.parametrize(
-        "invalid_token",
-        _TestAuthHeaderData.invalid_tokens,
-    )
+    # 유효하지 않은 토큰으로 토큰 갱신 요청 불가
     def test_cannot_renew_token_with_invalid_token(
         self,
         app: FastAPI,
         client: TestClient,
+        authorization_header_key: str,
         invalid_token: str,
     ):
-        header = {"Authorization": f"{settings.JWT_TOKEN_PREFIX} {invalid_token}"}
+        header = {authorization_header_key: f"{settings.JWT_TOKEN_PREFIX} {invalid_token}"}
         client.headers.update(header)
-        print(f"header with invalid token is appended - header={header!r}")
+        print(f"header with invalid token is appended to the request context - header={header}")
 
-        response = client.head(app.url_path_for("auth:token"))
-        print(f"response body: {response.json()!r}")
+        print("attempting to renew token...")
+        response = client.get(app.url_path_for("auth:renew-token"))
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN, "HTTP response status code가 403 Forbidden이어야 합니다."
-        assert response.json() == {
-            "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.HTTP_401_UNAUTHORIZED_ERROR,
-        }
+        assert (
+            response.status_code == status.HTTP_401_UNAUTHORIZED
+        ), "HTTP response status code가 '401 Unauthorized'여야 합니다."
+        assert response.json() == ErrorList().append(ManagedErrors.unauthorized).dict(), \
+            "Error code가 'unauthorized'여야 합니다."
 
-    @pytest.mark.parametrize(
-        "invalid_token_prefix",
-        _TestAuthHeaderData.invalid_token_prefixes,
-    )
+    # 유효하지 않은 token prefix로 토큰 갱신 요청 불가
     def test_cannot_renew_token_with_invalid_token_prefix(
         self,
         app: FastAPI,
-        token: str,
         client: TestClient,
+        token: str,
+        authorization_header_key: str,
         invalid_token_prefix: str,
     ):
-        header = {"Authorization": f"{invalid_token_prefix} {token}"}
+        header = {authorization_header_key: f"{invalid_token_prefix} {token}"}
         client.headers.update(header)
-        print(f"header with invalid token prefix is appended - header={header!r}")
+        print(f"header with invalid token prefix is appended to the request context - header={header}")
 
-        response = client.head(app.url_path_for("auth:token"))
-        print(f"response body: {response.json()!r}")
+        print("attempting to renew token...")
+        response = client.get(app.url_path_for("auth:renew-token"))
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN, "HTTP response status code가 403 Forbidden이어야 합니다."
-        assert response.json() == {
-            "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.HTTP_401_UNAUTHORIZED_ERROR,
-        }
+        assert (
+            response.status_code == status.HTTP_401_UNAUTHORIZED
+        ), "HTTP response status code가 '401 Unauthorized'여야 합니다."
+        assert response.json() == ErrorList().append(ManagedErrors.unauthorized).dict(), \
+            "Error code가 'unauthorized'여야 합니다."
 
-    def test_cannot_renew_token_with_expired_token(
-        self,
-        app: FastAPI,
-        user: UserInDB,
-        client: TestClient,
-    ):
-        # 1분 전에 만료된 토큰
-        expired_token = jwt.create_jwt_token(
-            jwt_content=User(**user.dict()).dict(),
-            secret_key=settings.JWT_SECRET_KEY,
-            expires_delta=timedelta(minutes=-1),
-        )
-        header = {"Authorization": f"{settings.JWT_TOKEN_PREFIX} {expired_token}"}
-        client.headers.update({"Authorization": f"{settings.JWT_TOKEN_PREFIX} {expired_token}"})
-        print(f"header with expired is appended - header={header!r}")
-
-        response = client.head(app.url_path_for("auth:token"))
-        print(f"response body: {response.json()!r}")
-
-        assert response.status_code == status.HTTP_403_FORBIDDEN, "HTTP response status code가 403 Forbidden이어야 합니다."
-        assert response.json() == {
-            "type": strings.ErrorTypes.invalid_request_error.value,
-            "detail": strings.HTTP_401_UNAUTHORIZED_ERROR,
-        }
-
+    # 유효한 토큰으로 토큰 갱신 가능
     def test_can_renew_token(
         self,
         app: FastAPI,
-        token: str,
+        user_dict: dict,
         authorized_client: TestClient,
     ):
-        response = authorized_client.head(app.url_path_for("auth:token"))
-        print(f"response body: {response.json()!r}")
+        print("attempting to renew token...")
+        response = authorized_client.get(app.url_path_for("auth:renew-token"))
 
-        assert response.status_code == status.HTTP_200_OK, "HTTP response status code가 200 OK여야 합니다."
-        assert response.json() == {"token": token}
+        token_in_response = response.json()["token"]
+        user_from_token = jwt.get_user_from_token(token_in_response)
+        print(f"token_in_response: {token_in_response}")
+
+        assert (
+            response.status_code == status.HTTP_200_OK
+        ), "HTTP response status code가 '200 OK'여야 합니다."
+        assert user_from_token.dict() == user_dict, "갱신된 토큰이 유효해야 합니다."

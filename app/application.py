@@ -1,13 +1,18 @@
 from fastapi import FastAPI
-from fastapi.exceptions import ValidationError, RequestValidationError
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import ORJSONResponse
-# from starlette.exceptions import HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from mangum import Mangum
 
 from api.v1.api import router
-from api.v1.errors.handlers import http_error_hander, http_validation_error_handler
-from app.core.openapi import custom_openapi_schema
+from app.core.errors.handlers import (
+    http_exception_hander,
+    request_validation_exception_handler,
+    starlette_http_exception_handler,
+)
+from app.core.openapi import custom_openapi
 from app.core.exceptions import HTTPException
 
 
@@ -17,13 +22,23 @@ def get_application() -> FastAPI:
 
     application.include_router(router, prefix="/v1")
 
-    application.add_exception_handler(HTTPException, http_error_hander)
-    application.add_exception_handler(ValidationError, http_validation_error_handler)
-    application.add_exception_handler(
-        RequestValidationError, http_validation_error_handler
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
-    application.openapi_schema = custom_openapi_schema(application)
+    application.add_exception_handler(HTTPException, http_exception_hander)
+    application.add_exception_handler(
+        StarletteHTTPException, starlette_http_exception_handler
+    )
+    application.add_exception_handler(
+        RequestValidationError, request_validation_exception_handler
+    )
+
+    application.openapi_schema = custom_openapi(application)
 
     return application
 
@@ -45,17 +60,4 @@ def handler(event, context):
     print("# RESPONSE")
     print(response)
 
-    cors_headers = {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Credentials": True,
-        "Access-Control-Allow-Methods": "*",
-        "Access-Control-Allow-Headers": "*",
-    }
-    if "headers" in response:
-        response["headers"].update(cors_headers)
-    else:
-        response["headers"] = cors_headers
-
-    print("# RESPONSE(after_append_header)")
-    print(response)
     return response
