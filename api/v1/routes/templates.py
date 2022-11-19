@@ -7,6 +7,7 @@ from app.core.errors.errors import ManagedErrors
 from app.core.config import settings
 from app.core.openapi import ResponseSchemaV1
 from app.db.repositories.templates import TemplatesRepository
+from app.db.errors import EntityDoesNotExist
 from app.dependencies.auth import get_current_user_authorizer
 from app.dependencies.repositories import get_repository
 
@@ -30,12 +31,21 @@ async def create_template(
     "/{template_id}",
     name="templates:retrieve-template",
     status_code=status.HTTP_200_OK,
+    responses=ResponseSchemaV1.Templates.RETRIEVE_TEMPLATE,
 )
 async def retrieve_template(
     template_id: int = Path(...),
     templates_repo: TemplatesRepository = Depends(get_repository(TemplatesRepository)),
 ):
-    raise NotImplementedError
+    try:
+        template = templates_repo.retrieve_template_by_id(template_id)
+    except EntityDoesNotExist:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            errors=ManagedErrors.not_found,
+        )
+
+    return template
 
 
 @router.get(

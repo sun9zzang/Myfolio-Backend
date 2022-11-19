@@ -5,7 +5,7 @@ from fastapi.openapi.utils import get_openapi
 from pydantic import BaseModel
 
 from app.core.schemas.users import User, UserWithToken, Token
-from app.core.schemas.templates import TemplatesResponse
+from app.core.schemas.templates import TemplatesResponse, Template
 from app.core.schemas.errors import Error, ErrorList
 from app.core.errors.errors import ManagedErrors
 
@@ -107,20 +107,39 @@ class ExampleModelDatas:
     token_renewed = {"token": "brandnewtoken<3"}
     user_with_token = {"user": user, **token}
 
+    template = {
+        "template_id": 12345,
+        "title": "awesome template 123",
+        "likes": 777,
+        "content": "content example",
+        "created_date": "2022-11-15T06:42:05.018903",
+        "user": {
+            "user_id": 1234567,
+            "email": "myfolio@myfolio.com",
+            "username": "myfolio",
+        },
+    }
     templates_response = {
-        "templates": [{
+        "templates": [
+            {
                 "template_id": 12345,
                 "title": "awesome template 123",
                 "likes": 777,
                 "created_date": "2022-11-15T06:42:05.018903",
-                "user_id": 123456,
+                "user": {
+                    "user_id": 1234567,
+                    "username": "myfolio",
+                },
             },
             {
                 "template_id": 67890,
                 "title": "yummy",
                 "likes": 1004,
                 "created_date": "2022-11-15T06:42:05.721721",
-                "user_id": 1004,
+                "user": {
+                    "user_id": 1004,
+                    "username": "angel",
+                },
             },
         ]
     }
@@ -248,6 +267,23 @@ class ResponseSchemaV1:
         }
 
     class Templates:
+        RETRIEVE_TEMPLATE = {
+            status.HTTP_200_OK: _get_schema(
+                description="요청 성공 시 템플릿을 반환합니다.",
+                model=Template,
+                example=ExampleModelDatas.template,
+            ),
+            status.HTTP_400_BAD_REQUEST: _get_schema(
+                description="요청 형식이 잘못되어 에러를 반환합니다.",
+                model=ErrorList,
+                example=_get_error_schema(ManagedErrors.bad_request),
+            ),
+            status.HTTP_404_NOT_FOUND: _get_schema(
+                description="요청한 템플릿이 존재하지 않으면 에러를 반환합니다.",
+                model=ErrorList,
+                example=_get_error_schema(ManagedErrors.not_found),
+            ),
+        }
         RETRIEVE_TEMPLATES_LIST = {
             status.HTTP_200_OK: _get_schema(
                 description="요청 성공 시 템플릿 리스트를 반환합니다.",

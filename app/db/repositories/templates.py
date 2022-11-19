@@ -1,9 +1,10 @@
 from sqlalchemy import select
 
-from app.core.schemas.templates import TemplateInList
+from app.core.schemas.templates import TemplateInList, UserInTemplateInList, Template
 from app.core.models.templates import TblTemplates
 from app.core.models.users import TblUsers
 from app.db.repositories.base import BaseRepository
+from app.db.errors import EntityDoesNotExist
 
 
 class TemplatesRepository(BaseRepository):
@@ -11,11 +12,29 @@ class TemplatesRepository(BaseRepository):
         raise NotImplementedError
 
     def retrieve_template_by_id(self, template_id: int):
-        raise NotImplementedError
+        with self.get_session() as session:
+            template = session.get(TblTemplates, template_id)
+            if template is None:
+                raise EntityDoesNotExist
+            user = session.get(TblUsers, template.user_id)
+            if user is None:
+                raise EntityDoesNotExist  # todo error hanlding
+
+            return Template(
+                **template.__dict__,  # todo optimize
+                user=user.__dict__,
+            )
 
     def retrieve_templates(self, offset: int, limit: int) -> list[TemplateInList]:
         query = (
-            select(TblTemplates, TblUsers.username)
+            select(
+                TblTemplates.template_id,
+                TblTemplates.title,
+                TblTemplates.likes,
+                TblTemplates.created_date,
+                TblUsers.user_id,
+                TblUsers.username,
+            )
             .outerjoin(TblUsers)
             .order_by(TblTemplates.template_id.desc())
             .limit(limit)
@@ -25,7 +44,17 @@ class TemplatesRepository(BaseRepository):
             # todo ordered by popularity, most viewed, etc.
             result = session.execute(query)
             return [
-                TemplateInList(**row[0].__dict__, username=row[1]) for row in result
+                TemplateInList(
+                    template_id=row[0],
+                    title=row[1],
+                    likes=row[2],
+                    created_date=row[3],
+                    user={
+                        "user_id": row[4],
+                        "username": row[5],
+                    },
+                )
+                for row in result
             ]
 
     def update_template(self):
