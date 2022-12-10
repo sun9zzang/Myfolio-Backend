@@ -4,10 +4,26 @@ from fastapi import FastAPI, status
 from fastapi.openapi.utils import get_openapi
 from pydantic import BaseModel
 
-from app.core.schemas.users import User, UserWithToken, Token
-from app.core.schemas.templates import TemplatesResponse, Template
-from app.core.schemas.errors import Error, ErrorList
 from app.core.errors.errors import ManagedErrors
+from app.core.schemas.errors import Error, ErrorList
+from app.core.schemas.templates import Template, TemplatesResponse
+from app.core.schemas.users import Token, User, UserWithToken
+
+
+openapi_tags = [
+    {
+        "name": "Auth",
+        "description": "인증과 관련된 기능을 제공합니다.",
+    },
+    {
+        "name": "Users",
+        "description": "유저 생성, 정보 가져오기, 업데이트, 삭제와 관련된 기능을 제공합니다.",
+    },
+    {
+        "name": "Templates",
+        "description": "템플릿 생성, 가져오기, 리스트 가져오기, 업데이트, 삭제와 관련된 기능을 제공합니다.",
+    },
+]
 
 
 def custom_openapi(app: FastAPI) -> dict:
@@ -21,20 +37,7 @@ def custom_openapi(app: FastAPI) -> dict:
             contact=app.contact,
             license_info=app.license_info,
             routes=app.routes,
-            tags=[
-                {
-                    "name": "Auth",
-                    "description": "인증과 관련된 기능을 제공합니다.",
-                },
-                {
-                    "name": "Users",
-                    "description": "유저 생성, 정보 가져오기, 업데이트, 삭제와 관련된 기능을 제공합니다.",
-                },
-                {
-                    "name": "Templates",
-                    "description": "템플릿 생성, 가져오기, 리스트 가져오기, 업데이트, 삭제와 관련된 기능을 제공합니다.",
-                },
-            ],
+            tags=openapi_tags,
             servers=app.servers,
         )
 
@@ -88,7 +91,11 @@ def _get_error_schema(
 
 class ExampleModelDatas:
 
-    user = {"user_id": 1234567, "email": "myfolio@myfolio.com", "username": "myfolio"}
+    user = {
+        "user_id": 1234567,
+        "email": "myfolio@myfolio.com",
+        "username": "myfolio",
+    }
     user_in_create = {
         "email": "myfolio@myfolio.com",
         "username": "myfolio",

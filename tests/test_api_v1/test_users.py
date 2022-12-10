@@ -2,9 +2,9 @@ import pytest
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 
-from app.core.schemas.users import User, UserInDB
-from app.core.schemas.errors import ErrorList
 from app.core.errors.errors import ManagedErrors
+from app.core.schemas.errors import ErrorList
+from app.core.schemas.users import User, UserInDB
 
 
 class _TestUserData:
@@ -63,7 +63,8 @@ class TestV1UsersPOST:
             ("password", "short"),  # too short
             (
                 "password",
-                "tooooo000000000000000000looooo0000000000000000000ngbabyyyyyyyyyyyyyyyyyyyyyyyy",
+                "tooooo000000000000000000looooo0000000000000000000ng"
+                "babyyyyyyyyyyyyyyyyyyyyyyyy",
             ),  # too long
             ("password", "hgowrgwf@@@"),  # no digits
             ("password", "$$$$3213743"),  # no alphas
@@ -135,7 +136,8 @@ class TestV1UsersRetrieveUserGET:
         invalid_user_id: str,
     ):
         print(
-            f"attempting to retrieve user with invalid syntax - invalid_user_id: {invalid_user_id}"
+            "attempting to retrieve user with invalid syntax"
+            f" - invalid_user_id: {invalid_user_id}"
         )
         response = client.get(
             app.url_path_for("users:retrieve-user", user_id=invalid_user_id)
@@ -181,7 +183,7 @@ class TestV1UsersUpdateUserPATCH:
         user: UserInDB,
         client: TestClient,
     ):
-        print(f"attempting to update user without authentication...")
+        print("attempting to update user without authentication...")
 
         raise NotImplementedError
 

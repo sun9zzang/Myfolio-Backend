@@ -1,6 +1,6 @@
+import base64
 import json
 
-import base64
 import boto3
 from botocore.exceptions import ClientError
 from pydantic import BaseSettings
@@ -20,7 +20,8 @@ def get_secret() -> dict:
         get_secret_value_response = client.get_secret_value(SecretId=secret_name)
     except ClientError as e:
         if e.response["Error"]["Code"] == "DecryptionFailureException":
-            # Secrets Manager can't decrypt the protected secret text using the provided KMS key.
+            # Secrets Manager can't decrypt the protected secret text
+            # using the provided KMS key.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
         elif e.response["Error"]["Code"] == "InternalServiceErrorException":
@@ -32,7 +33,8 @@ def get_secret() -> dict:
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
         elif e.response["Error"]["Code"] == "InvalidRequestException":
-            # You provided a parameter value that is not valid for the current state of the resource.
+            # You provided a parameter value that is not valid
+            # for the current state of the resource.
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
         elif e.response["Error"]["Code"] == "ResourceNotFoundException":
@@ -40,8 +42,10 @@ def get_secret() -> dict:
             # Deal with the exception here, and/or rethrow at your discretion.
             raise e
     else:
-        # Secrets Manager decrypts the secret value using the associated KMS CMK
-        # Depending on whether the secret was a string or binary, only one of these fields will be populated
+        # Secrets Manager decrypts the secret value
+        # using the associated KMS CMK
+        # Depending on whether the secret was a string or binary,
+        # only one of these fields will be populated
         if "SecretString" in get_secret_value_response:
             secret_data = get_secret_value_response["SecretString"]
         else:

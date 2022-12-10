@@ -1,10 +1,10 @@
-from sqlalchemy import Column, String, ForeignKey, Text
+from sqlalchemy import Column, ForeignKey, String, Text
+from sqlalchemy.dialects.mysql import BIGINT, DATETIME, INTEGER
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.mysql import BIGINT, INTEGER, DATETIME
 from sqlalchemy.sql.expression import func
 
-from app.core.models.base_generate import Base
 from app.core.config import settings
+from app.core.models.base_generate import Base
 
 
 class TblTemplates(Base):

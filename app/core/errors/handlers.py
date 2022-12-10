@@ -1,13 +1,13 @@
 from fastapi import status
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import ValidationError
 from fastapi.requests import Request
 from fastapi.responses import ORJSONResponse
-from fastapi.exceptions import ValidationError
-from fastapi.encoders import jsonable_encoder
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.core.errors.errors import ManagedErrors
 from app.core.exceptions import HTTPException
 from app.core.schemas.errors import Error, ErrorList
-from app.core.errors.errors import ManagedErrors
 
 
 async def http_exception_hander(req: Request, exc: HTTPException) -> ORJSONResponse:

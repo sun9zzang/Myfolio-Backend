@@ -1,16 +1,15 @@
 from fastapi import APIRouter, Depends, Path, Query, status
 
-from app.core.schemas.users import UserInDB
-from app.core.schemas.templates import TemplatesResponse
-from app.core.exceptions import HTTPException
-from app.core.errors.errors import ManagedErrors
 from app.core.config import settings
+from app.core.errors.errors import ManagedErrors
+from app.core.exceptions import HTTPException
 from app.core.openapi import ResponseSchemaV1
-from app.db.repositories.templates import TemplatesRepository
+from app.core.schemas.templates import TemplatesResponse
+from app.core.schemas.users import UserInDB
 from app.db.errors import EntityDoesNotExist
+from app.db.repositories.templates import TemplatesRepository
 from app.dependencies.auth import get_current_user_authorizer
 from app.dependencies.repositories import get_repository
-
 
 router = APIRouter()
 

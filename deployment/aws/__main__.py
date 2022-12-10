@@ -1,12 +1,8 @@
 """An AWS Python Pulumi program"""
 
-import json
-
+import iam
 import pulumi
 import pulumi_aws as aws
-
-import iam
-
 
 # Lambda function의 package 저장을 위한 S3 Bucket과 Object 생성
 lambda_packages_bucket = aws.s3.BucketV2(

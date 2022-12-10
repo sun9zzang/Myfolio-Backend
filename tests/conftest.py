@@ -4,13 +4,13 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.core.schemas.users import UserInCreate, UserInDB
-from app.core.config import settings
-from app.core import jwt
-from app.db.repositories.users import UsersRepository
-from app.db.errors import EntityDoesNotExist
-from app.dependencies.auth import AUTHORIZATION_HEADER_KEY
 from app.application import get_application
+from app.core import jwt
+from app.core.config import settings
+from app.core.schemas.users import UserInCreate, UserInDB
+from app.db.errors import EntityDoesNotExist
+from app.db.repositories.users import UsersRepository
+from app.dependencies.auth import AUTHORIZATION_HEADER_KEY
 
 
 class UserTestData(Enum):
@@ -101,7 +101,9 @@ def authorization_header_key() -> str:
 
 
 @pytest.fixture
-def authorized_client(client: TestClient, token: str, authorization_header_key: str) -> TestClient:
+def authorized_client(
+    client: TestClient, token: str, authorization_header_key: str
+) -> TestClient:
     header = {authorization_header_key: f"{settings.JWT_TOKEN_PREFIX} {token}"}
     print(f"authorization header is created - header={header}")
     client.headers.update(header)

@@ -1,20 +1,19 @@
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import ORJSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.exceptions import HTTPException as StarletteHTTPException
-
+from fastapi.responses import ORJSONResponse
 from mangum import Mangum
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.v1.api import router
 from app.core.errors.handlers import (
     http_exception_hander,
+    not_implemented_error_handler,
     request_validation_exception_handler,
     starlette_http_exception_handler,
-    not_implemented_error_handler,
 )
-from app.core.openapi import custom_openapi
 from app.core.exceptions import HTTPException
+from app.core.openapi import custom_openapi
 
 
 def get_application() -> FastAPI:
@@ -31,9 +30,7 @@ def get_application() -> FastAPI:
         allow_headers=["*"],
     )
 
-    application.add_exception_handler(
-        HTTPException, http_exception_hander
-    )
+    application.add_exception_handler(HTTPException, http_exception_hander)
     application.add_exception_handler(
         StarletteHTTPException, starlette_http_exception_handler
     )

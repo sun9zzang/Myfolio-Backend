@@ -1,10 +1,10 @@
 from sqlalchemy import select
 
-from app.core.schemas.templates import TemplateInList, UserInTemplateInList, Template
 from app.core.models.templates import TblTemplates
 from app.core.models.users import TblUsers
-from app.db.repositories.base import BaseRepository
+from app.core.schemas.templates import Template, TemplateInList
 from app.db.errors import EntityDoesNotExist
+from app.db.repositories.base import BaseRepository
 
 
 class TemplatesRepository(BaseRepository):

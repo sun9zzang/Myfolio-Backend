@@ -3,13 +3,13 @@ from typing import Callable, Optional
 from fastapi import Depends, Security, status
 from fastapi.security import APIKeyHeader
 
+from app.core import jwt
 from app.core.config import settings
+from app.core.errors.errors import ManagedErrors
 from app.core.exceptions import HTTPException
 from app.core.schemas.users import UserInDB
-from app.core.errors.errors import ManagedErrors
-from app.core import jwt
-from app.db.repositories.users import UsersRepository
 from app.db.errors import EntityDoesNotExist
+from app.db.repositories.users import UsersRepository
 from app.dependencies.repositories import get_repository
 
 AUTHORIZATION_HEADER_KEY = "Authorization"
@@ -20,7 +20,9 @@ def get_current_user_authorizer() -> Callable[[], UserInDB]:
 
 
 def _get_authorization_header(
-    api_key: Optional[str] = Security(APIKeyHeader(name=AUTHORIZATION_HEADER_KEY, auto_error=False)),
+    api_key: Optional[str] = Security(
+        APIKeyHeader(name=AUTHORIZATION_HEADER_KEY, auto_error=False)
+    ),
 ) -> str:
     if api_key is None:
         raise HTTPException(

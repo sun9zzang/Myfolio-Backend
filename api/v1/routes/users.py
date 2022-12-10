@@ -1,17 +1,21 @@
-from fastapi import APIRouter, Body, Depends, status, Path
+from fastapi import APIRouter, Body, Depends, Path, status
 from fastapi.responses import Response
 
-from app.core.schemas.users import User, UserInCreate, UserInUpdate, UserWithToken, Token
-from app.core.schemas.errors import ErrorList
-from app.core.openapi import ResponseSchemaV1, ExampleModelDatas
-from app.core.exceptions import HTTPException
-from app.core.errors.errors import ManagedErrors
 from app.core import jwt, utils
+from app.core.errors.errors import ManagedErrors
+from app.core.exceptions import HTTPException
+from app.core.openapi import ExampleModelDatas, ResponseSchemaV1
+from app.core.schemas.errors import ErrorList
+from app.core.schemas.users import (
+    User,
+    UserInCreate,
+    UserInUpdate,
+    UserWithToken,
+)
 from app.db.errors import EntityDoesNotExist
 from app.db.repositories.users import UsersRepository
 from app.dependencies.auth import get_current_user_authorizer
 from app.dependencies.repositories import get_repository
-
 
 router = APIRouter()
 

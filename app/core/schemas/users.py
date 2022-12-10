@@ -1,6 +1,6 @@
-import bcrypt
 from typing import Optional
 
+import bcrypt
 from pydantic import BaseModel
 
 

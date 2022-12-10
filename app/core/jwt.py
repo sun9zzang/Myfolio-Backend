@@ -36,7 +36,11 @@ def create_access_token_for_user(
 
 def get_user_from_token(token: str) -> User:
     try:
-        return User(**jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.ALGORITHM]))
+        return User(
+            **jwt.decode(
+                token, settings.JWT_SECRET_KEY, algorithms=[settings.ALGORITHM]
+            )
+        )
     except jwt.PyJWTError as decode_error:
         raise ValueError("unable to decode JWT token") from decode_error
     except ValidationError as validation_error:

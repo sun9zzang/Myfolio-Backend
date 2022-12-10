@@ -3,9 +3,9 @@ from typing import Optional
 from sqlalchemy import select
 
 from app.core.models.users import TblUsers
-from app.core.schemas.users import UserInDB, UserInCreate, UserInUpdate
-from app.db.repositories.base import BaseRepository
+from app.core.schemas.users import UserInCreate, UserInDB, UserInUpdate
 from app.db.errors import EntityDoesNotExist
+from app.db.repositories.base import BaseRepository
 
 
 class UsersRepository(BaseRepository):

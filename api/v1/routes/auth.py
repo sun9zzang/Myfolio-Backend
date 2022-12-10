@@ -1,15 +1,20 @@
 from fastapi import APIRouter, Body, Depends, status
 
-from app.core.schemas.users import User, UserInLogin, UserInDB, UserWithToken, Token
-from app.core.openapi import ResponseSchemaV1, ExampleModelDatas
-from app.core.exceptions import HTTPException
-from app.core.errors.errors import ManagedErrors
 from app.core import jwt
-from app.db.repositories.users import UsersRepository
+from app.core.errors.errors import ManagedErrors
+from app.core.exceptions import HTTPException
+from app.core.openapi import ExampleModelDatas, ResponseSchemaV1
+from app.core.schemas.users import (
+    Token,
+    User,
+    UserInDB,
+    UserInLogin,
+    UserWithToken,
+)
 from app.db.errors import EntityDoesNotExist
-from app.dependencies.repositories import get_repository
+from app.db.repositories.users import UsersRepository
 from app.dependencies.auth import get_current_user_authorizer
-
+from app.dependencies.repositories import get_repository
 
 router = APIRouter()
 
