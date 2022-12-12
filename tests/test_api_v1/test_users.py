@@ -3,72 +3,44 @@ from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 
 from app.core.errors.errors import ManagedErrors
-from app.core.schemas.errors import ErrorList
-from app.core.schemas.users import User, UserInDB
+from app.core.schemas.errors import Error, ErrorList
+from app.core.schemas.users import UserInDB
+from app.core.strings import APINames
+from app.core import jwt
+from tests.resources import AssertionStrings, TestParamData
 
 
-class _TestUserData:
-    wrong_email = []
-    wrong_username = []
-    wrong_password = []
-
-    invalid_token = []
-    invalid_token_prefix = []
-
-
-@pytest.fixture(params=[])
-def invalid_authorization_header(request):
-    return request.param
-
-
-@pytest.fixture(params=_TestUserData.invalid_token)
-def invalid_token(request):
-    return request.param
-
-
-@pytest.fixture(params=_TestUserData.invalid_token_prefix)
-def invalid_token_prefix(request):
-    return request.param
+# @pytest.fixture(
+#     params=[
+#         {"email": TestParamData.invalid_email_values},
+#         {"username": TestParamData.invalid_username_values},
+#         {"password": TestParamData.invalid_password_values},
+#     ]
+# )
+# def invalid_user_field_param(request) -> dict:
+#     return request.param
 
 
 # POST /v1/users
 # 신규 유저를 생성합니다.
 class TestV1UsersPOST:
 
-    # 유효하지 않은 유저 정보 필드로 유저 생성 불가
+    # 1. 유효하지 않은 유저 정보 필드로 유저 생성 불가
     @pytest.mark.parametrize(
-        "wrong_field, wrong_value",
+        "invalid_user_field, expected_error",
         [
-            ("email", "Abc.example.com"),
-            ("email", "A@b@c@example.com"),
-            ("email", r"a\"b(c)d,e:f;g<h>i[j\k]l@example.com"),
-            ("email", 'just"not"right@example.com'),
-            ("email", 'this is"not\\allowed@example.com'),
-            ("email", 'this\\ still"notallowed@example.com'),
-            ("email", "weird@examplecom"),  # no dots on domain-part
             (
-                "email",
-                "weir.do@examplecom",
-            ),  # dots on local-part, no dots on domain-part
-            ("username", "악"),  # too short
-            # ("username", "qq"),  # too short
-            ("username", "으악악악악엥뜨악힝"),  # too long
-            ("username", "qwertyqwertyqwerty"),  # too long
-            ("username", "후asdf하qwer히qwe"),  # too long
-            # ("username", "ㅁㄴㅇㄹ"),  # 완성형 한글이 아님
-            ("password", "패쓰와드패쓰와드"),  # only korean
-            ("password", "thisispass와d123"),  # contains korean
-            ("password", "onlyalphapwd"),  # only alphas
-            ("password", "135871394137"),  # only digits
-            ("password", "short"),  # too short
+                {"email": TestParamData.invalid_email_values},
+                ManagedErrors.invalid_email,
+            ),
             (
-                "password",
-                "tooooo000000000000000000looooo0000000000000000000ng"
-                "babyyyyyyyyyyyyyyyyyyyyyyyy",
-            ),  # too long
-            ("password", "hgowrgwf@@@"),  # no digits
-            ("password", "$$$$3213743"),  # no alphas
-            # ("password", "password1234"),  # too weak
+                {"username": TestParamData.invalid_username_values},
+                ManagedErrors.invalid_username,
+            ),
+            (
+                {"password": TestParamData.invalid_password_values},
+                ManagedErrors.invalid_password,
+            ),
         ],
     )
     def test_cannot_create_user_with_wrong_field(
@@ -76,29 +48,37 @@ class TestV1UsersPOST:
         app: FastAPI,
         user_dict: dict,
         client: TestClient,
-        wrong_field: str,
-        wrong_value: str,
+        invalid_user_field: dict,
+        expected_error: Error,
     ):
-        user_dict.update({wrong_field: wrong_value})
-        print(f"attempting to create user with invalid field - user_dict: {user_dict}")
+        user_dict.update(invalid_user_field)
+        print(f"attempting to create user with invalid field - user_dict={user_dict}")
         response = client.post(
-            app.url_path_for("users:create-user"),
+            app.url_path_for(APINames.USERS_CREATE_USER_POST),
             json=user_dict,
         )
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST, ""
         assert (
-            response.json()["errors"][0]["code"] == "invalid_" + wrong_field
-        ), ""  # todo
+            response.status_code == status.HTTP_400_BAD_REQUEST
+        ), AssertionStrings.status_code(status.HTTP_400_BAD_REQUEST)
+        assert response.json() == ErrorList(
+            ManagedErrors.invalid_credentials
+        ), AssertionStrings.errors(ManagedErrors.invalid_credentials)
 
-    # 중복된 필드로 유저 생성 요청 불가
+    # 2. 중복된 필드로 유저 생성 요청 불가
     def test_cannot_create_user_with_duplicated_field(
         self,
         app: FastAPI,
+        user_dict: dict,
         user: UserInDB,
         client: TestClient,
     ):
-        raise NotImplementedError
+        print(
+            "attempting to create user"
+            f" with duplicated field - user_dict={user_dict}"
+        )
+
+        # todo
 
     # 유효한 필드로 유저 생성 요청 가능
     def test_can_create_user(
@@ -107,16 +87,27 @@ class TestV1UsersPOST:
         user_dict: dict,
         client: TestClient,
     ):
-        print(f"attempting to create user - user_dict: {user_dict}")
+        print(f"attempting to create user - user_dict={user_dict}")
         response = client.post(
-            app.url_path_for("users:create-user"),
+            app.url_path_for(APINames.USERS_CREATE_USER_POST),
             json=user_dict,
         )
 
-        assert response.status_code == status.HTTP_201_CREATED, ""
-        assert User(**response.json()).dict() == user_dict, ""
+        user_in_response = response.json()["user"]
+        token_in_response = response.json()["token"]
+        user_from_token = jwt.get_user_from_token(token_in_response)
+
+        assert (
+            response.status_code == status.HTTP_201_CREATED
+        ), AssertionStrings.status_code(status.HTTP_201_CREATED)
+        assert user_in_response["email"] == user_dict["email"]
+        assert user_in_response["username"] == user_dict["username"]
+        assert user_from_token.email == user_dict["email"]
+        assert user_from_token.username == user_dict["username"]
 
 
+# GET /v1/users/{user_id}
+# 유저 정보를 가져옵니다.
 class TestV1UsersRetrieveUserGET:
 
     # 잘못된 user_id로 유저 정보 요청 불가

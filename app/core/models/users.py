@@ -3,7 +3,7 @@ from sqlalchemy import Column, String
 from sqlalchemy.dialects.mysql import BINARY, INTEGER
 from sqlalchemy.orm import relationship
 
-from app.core.config import settings
+from app.core.config import config
 from app.core.models.base_generate import Base
 
 
@@ -12,13 +12,13 @@ class TblUsers(Base):
 
     user_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
     email = Column(
-        String(settings.EMAIL_MAX_LENGTH),
+        String(config.USERS_EMAIL_MAX_LENGTH),
         index=True,
         nullable=False,
         unique=True,
     )
     username = Column(
-        String(settings.USERNAME_MAX_LENGTH),
+        String(config.USERS_USERNAME_MAX_LENGTH),
         index=True,
         nullable=False,
         unique=True,

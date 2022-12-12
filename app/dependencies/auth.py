@@ -4,7 +4,7 @@ from fastapi import Depends, Security, status
 from fastapi.security import APIKeyHeader
 
 from app.core import jwt
-from app.core.config import settings
+from app.core.config import config
 from app.core.errors.errors import ManagedErrors
 from app.core.exceptions import HTTPException
 from app.core.schemas.users import UserInDB
@@ -38,7 +38,7 @@ def _get_authorization_header(
             errors=ManagedErrors.unauthorized,
         )
 
-    if token_prefix != settings.JWT_TOKEN_PREFIX:
+    if token_prefix != config.JWT_TOKEN_PREFIX:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             errors=ManagedErrors.unauthorized,

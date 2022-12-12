@@ -5,7 +5,6 @@ from app.core import jwt, utils
 from app.core.errors.errors import ManagedErrors
 from app.core.exceptions import HTTPException
 from app.core.openapi import ExampleModelDatas, ResponseSchemaV1
-from app.core.schemas.errors import ErrorList
 from app.core.schemas.users import (
     User,
     UserInCreate,
@@ -16,13 +15,14 @@ from app.db.errors import EntityDoesNotExist
 from app.db.repositories.users import UsersRepository
 from app.dependencies.auth import get_current_user_authorizer
 from app.dependencies.repositories import get_repository
+from app.core.strings import APINames
 
 router = APIRouter()
 
 
 @router.post(
     "",
-    name="users:create_user",
+    name=APINames.USERS_CREATE_USER_POST,
     status_code=status.HTTP_201_CREATED,
     responses=ResponseSchemaV1.Users.CREATE_USER,
 )
@@ -30,7 +30,7 @@ async def create_user(
     user_in_create: UserInCreate = Body(..., example=ExampleModelDatas.user_in_create),
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
 ):
-    error_list = ErrorList()
+    error_list = []
 
     # validate email
     if not utils.validate_email(user_in_create.email):
@@ -48,7 +48,7 @@ async def create_user(
     if not utils.validate_password(user_in_create.password):
         error_list.append(ManagedErrors.invalid_password)
 
-    if error_list.errors:
+    if error_list:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, errors=error_list)
 
     user_in_db = users_repo.create_user(user_in_create)
@@ -62,7 +62,7 @@ async def create_user(
 
 @router.get(
     "/{user_id}",
-    name="users:retrieve_user",
+    name=APINames.USERS_RETRIEVE_USER_GET,
     status_code=status.HTTP_200_OK,
     responses=ResponseSchemaV1.Users.RETRIEVE_USER,
 )
@@ -78,12 +78,12 @@ async def retrieve_user(
             errors=ManagedErrors.not_found,
         )
 
-    return User(**user_in_db.dict(exclude={"salt", "hashed_password"}))
+    return User(**user_in_db.dict())
 
 
 @router.patch(
     "",
-    name="users:update_user",
+    name=APINames.USERS_UPDATE_USER_PATCH,
     status_code=status.HTTP_200_OK,
     responses=ResponseSchemaV1.Users.UPDATE_USER,
 )
@@ -110,7 +110,7 @@ async def update_user(
             errors=ManagedErrors.bad_request,
         )
 
-    error_list = ErrorList()
+    error_list = []
 
     # validate email
     if user_in_update.email is not None:
@@ -131,7 +131,7 @@ async def update_user(
         if not utils.validate_password(user_in_update.password):
             error_list.append(ManagedErrors.invalid_password)
 
-    if error_list.errors:
+    if error_list:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             errors=error_list,
@@ -144,7 +144,7 @@ async def update_user(
 
 @router.delete(
     "/{user_id}",
-    name="users:delete_user",
+    name=APINames.USERS_DELETE_USER_DELETE,
     status_code=status.HTTP_204_NO_CONTENT,
     responses=ResponseSchemaV1.Users.DELETE_USER,
 )

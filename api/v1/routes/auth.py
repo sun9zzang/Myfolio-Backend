@@ -15,13 +15,14 @@ from app.db.errors import EntityDoesNotExist
 from app.db.repositories.users import UsersRepository
 from app.dependencies.auth import get_current_user_authorizer
 from app.dependencies.repositories import get_repository
+from app.core.strings import APINames
 
 router = APIRouter()
 
 
 @router.post(
     "/login",
-    name="auth:login",
+    name=APINames.AUTH_LOGIN_POST,
     status_code=status.HTTP_200_OK,
     responses=ResponseSchemaV1.Auth.LOGIN,
 )
@@ -45,7 +46,7 @@ async def login(
         raise login_error
 
     token = jwt.create_access_token_for_user(user_in_db)
-    user = User(**user_in_db.dict(exclude={"salt", "hashed_password"}))
+    user = User(**user_in_db.dict())
 
     return UserWithToken(
         user=user,
@@ -55,7 +56,7 @@ async def login(
 
 @router.get(
     "/user-retriever",
-    name="auth:retrieve_user_from_token",
+    name=APINames.AUTH_USER_RETRIEVER_GET,
     status_code=status.HTTP_200_OK,
     responses=ResponseSchemaV1.Auth.USER_RETRIEVER,
 )
@@ -67,7 +68,7 @@ async def get_user_from_token(
 
 @router.get(
     "/renew-token",
-    name="auth:renew_token",
+    name=APINames.AUTH_RENEW_TOKEN_GET,
     status_code=status.HTTP_200_OK,
     responses=ResponseSchemaV1.Auth.RENEW_TOKEN,
 )

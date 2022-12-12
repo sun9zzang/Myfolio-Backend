@@ -86,7 +86,7 @@ def _get_schema(
 def _get_error_schema(
     *errors: Error,
 ) -> dict:
-    return {"errors": [error.dict() for error in errors]}
+    return ErrorList(*errors).dict()
 
 
 class ExampleModelDatas:

@@ -21,7 +21,8 @@ class ManagedErrors:
 
     # 403 Forbidden
     forbidden = Error(
-        message="The request has been passed to the server, but the user does not have enough permission on the request",
+        message="The request has been passed to the server,"
+        " but the user does not have enough permission on the request",
         code="forbidden",
     )
 
@@ -33,13 +34,15 @@ class ManagedErrors:
 
     # 405 Method Not Allowed
     method_not_allowed = Error(
-        message="The request method is known by the server but is not supported by the target resource",
+        message="The request method is known by the server"
+        " but is not supported by the target resource",
         code="method_not_allowed",
     )
 
     # 406 Not Acceptable
     not_acceptable = Error(
-        message="The server cannot find any content that conforms to the criteria given by the user agent",
+        message="The server cannot find any content that conforms"
+        " to the criteria given by the user agent",
         code="not_acceptable",
     )
 
@@ -51,7 +54,8 @@ class ManagedErrors:
 
     # 422 Unprocessable Entity
     unprocessable_entity = Error(
-        message="The request was well-formed but was unable to be followed due to semantic errors",
+        message="The request was well-formed but was unable"
+        " to be followed due to semantic errors",
         code="unprocessable_entity",
     )
 
@@ -69,7 +73,7 @@ class ManagedErrors:
     )
 
     # Basic managed errors for each HTTP response status code
-    basic_error_responses = {
+    basic_error_responses: dict[int, Error] = {
         status.HTTP_400_BAD_REQUEST: bad_request,
         status.HTTP_401_UNAUTHORIZED: unauthorized,
         status.HTTP_403_FORBIDDEN: forbidden,

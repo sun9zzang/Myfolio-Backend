@@ -1,6 +1,6 @@
 import re
 
-from app.core.config import settings
+from app.core.config import config
 
 
 def validate_email(email: str) -> bool:
@@ -10,8 +10,8 @@ def validate_email(email: str) -> bool:
     # 1. email의 길이가 settings.EMAIL_MAX_LENGTH를 넘지 않아야 함
     # 2. email이 settings.EMAIL_REGEX와 match되어야 함
     if (
-        len(email) <= settings.EMAIL_MAX_LENGTH
-        and re.compile(settings.EMAIL_REGEX).match(email) is not None
+        len(email) <= config.USERS_EMAIL_MAX_LENGTH
+        and re.compile(config.USERS_EMAIL_REGEX).match(email) is not None
     ):
         return True
     else:

@@ -1,22 +1,16 @@
-from enum import Enum
+from datetime import timedelta
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.application import get_application
+from app.core.schemas.users import User, UserInCreate, UserInDB, UserWithToken
+from app.core.config import config
 from app.core import jwt
-from app.core.config import settings
-from app.core.schemas.users import UserInCreate, UserInDB
-from app.db.errors import EntityDoesNotExist
 from app.db.repositories.users import UsersRepository
-from app.dependencies.auth import AUTHORIZATION_HEADER_KEY
-
-
-class UserTestData(Enum):
-    email = "test@test.com"
-    username = "test_username"
-    password = "p@ssw0rd"
+from app.db.errors import EntityDoesNotExist
+from app.application import get_application
+from tests.resources import UserTestData, TestParamData
 
 
 class UserExistenceError(Exception):
@@ -39,8 +33,7 @@ def client(app: FastAPI) -> TestClient:
 @pytest.fixture
 def user_dict() -> dict:
     # convert UserTestData to dict
-    user_data = {i.name: i.value for i in UserTestData}
-    return user_data
+    return {i.name: i.value for i in UserTestData}
 
 
 @pytest.fixture
@@ -49,7 +42,7 @@ def users_repo() -> UsersRepository:
 
 
 @pytest.fixture
-def user_setup(user_dict, users_repo: UsersRepository) -> UserInDB:
+def user_setup(user_dict: dict, users_repo: UsersRepository) -> UserInDB:
 
     if users_repo.email_exists(UserTestData.email.value):
         raise UserExistenceError(
@@ -96,17 +89,52 @@ def token(user: UserInDB) -> str:
 
 
 @pytest.fixture
-def authorization_header_key() -> str:
-    return AUTHORIZATION_HEADER_KEY
+def user_with_token(user: UserInDB, token: str) -> UserWithToken:
+    return UserWithToken(
+        user=User(**user.dict()),
+        token=token,
+    )
 
 
 @pytest.fixture
 def authorized_client(
-    client: TestClient, token: str, authorization_header_key: str
+    client: TestClient,
+    token: str,
 ) -> TestClient:
-    header = {authorization_header_key: f"{settings.JWT_TOKEN_PREFIX} {token}"}
+    header = {"Authorization": f"{config.JWT_TOKEN_PREFIX} {token}"}
     print(f"authorization header is created - header={header}")
     client.headers.update(header)
     print(f"client authorized - client={client!r}")
 
     return client
+
+
+@pytest.fixture(params=TestParamData.invalid_tokens)
+def invalid_token(request) -> str:
+    return config.JWT_TOKEN_PREFIX + " " + request.param
+
+
+@pytest.fixture(params=TestParamData.invalid_token_prefixes)
+def token_with_invalid_prefix(request, token: str) -> str:
+    return request.param + " " + token
+
+
+@pytest.fixture
+def expired_token(user: UserInDB) -> str:
+    # 1분 전에 만료된 토큰
+    return jwt.create_jwt_token(
+        jwt_content=User(**user.dict()).dict(),
+        secret_key=config.JWT_SECRET_KEY,
+        expires_delta=timedelta(minutes=-1),
+    )
+
+
+@pytest.fixture(
+    params=[
+        invalid_token,
+        token_with_invalid_prefix,
+        expired_token,
+    ]
+)
+def invalid_authorization_header(request) -> dict:
+    return {"Authorization": request.param}

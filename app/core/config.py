@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 
 import boto3
 from botocore.exceptions import ClientError
@@ -54,39 +55,71 @@ def get_secret() -> dict:
         return json.loads(secret_data)
 
 
-class Settings(BaseSettings):
-    # stage of application
-    APP_ENV: str = "dev"
+# secrets stored in AWS Secrets Manager
+secrets: dict = get_secret()
 
-    # secrets stored in AWS Secrets Manager
-    secrets: dict = get_secret()
 
-    # DB connection settings
-    DB_CONNECTION_STRING = secrets["rds_connection_string"]
+class GlobalConfig(BaseSettings):
 
     # datetime precision
     # 3 -> milliseconds, 6 -> microseconds
     DATETIME_PRECISION = 6
 
-    # JWT authentication config
-    JWT_TOKEN_PREFIX = "Bearer"
-    JWT_SUBJECT = "access"
-    ALGORITHM = "HS256"
-    JWT_SECRET_KEY = secrets["jwt_secret_key"]
-    ACCESS_TOKEN_EXPIRE_MINUTES = 30
+    # User config
+    USERS_EMAIL_MAX_LENGTH = 254
+    USERS_EMAIL_REGEX = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    USERS_USERNAME_MIN_LENGTH = 2
+    USERS_USERNAME_MAX_LENGTH = 32
 
-    # User settings
-    EMAIL_MAX_LENGTH = 254
-    EMAIL_REGEX = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-    USERNAME_MIN_LENGTH = 2
-    USERNAME_MAX_LENGTH = 32
-
-    # Templates settings
-    DEFAULT_TEMPLATES_LIST_LIMIT = 20
-    TEMPLATES_MIN_LIST_LIMIT = 1
-    TEMPLATES_MAX_LIST_LIMIT = 100
+    # Templates config
+    TEMPLATES_LIST_DEFAULT_ITEM_LIMIT = 20
+    TEMPLATES_LIST_MIN_ITEM_LIMIT = 1
+    TEMPLATES_LIST_MAX_ITEM_LIMIT = 100
     TEMPLATE_TITLE_MIN_LENGTH = 2
     TEMPLATE_TITLE_MAX_LENGTH = 50
 
+    # JWT authentication config
+    JWT_TOKEN_PREFIX = "Bearer"
+    JWT_SUBJECT = "access"
+    JWT_ALGORITHM = "HS256"
+    JWT_SECRET_KEY = secrets["jwt_secret_key"]
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-settings = Settings()
+
+class DevConfig(GlobalConfig):
+    ENV_STATE = "dev"
+
+    # DB connection settings
+    MYSQL_DSN: str = secrets["mysql_dsn_dev"]
+
+
+class TestConfig(GlobalConfig):
+    ENV_STATE = "test"
+
+    # DB connection settings
+    MYSQL_DSN: str = secrets["mysql_dsn_test"]
+
+
+class ProdConfig(GlobalConfig):
+    ENV_STATE = "prod"
+
+    # DB connection settings
+    MYSQL_DSN: str = secrets["mysql_dsn_prod"]
+
+
+class FactoryConfig:
+    def __init__(self, env_state: str):
+        self.env_state = env_state
+
+    def __call__(self):
+        if self.env_state == "prod":
+            return ProdConfig()
+        elif self.env_state == "dev":
+            return DevConfig()
+        elif self.env_state == "test":
+            return TestConfig()
+        else:
+            raise ValueError
+
+
+config = FactoryConfig(os.environ.get("ENV_STATE", "dev"))()

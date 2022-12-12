@@ -5,16 +5,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from pymysql.err import OperationalError
 
-from app.core.config import settings
+from app.core.config import config
 from app.core.errors.errors import ManagedErrors
 from app.core.models import base
 from app.core.exceptions import HTTPException
 
 
 class DB:
-    def __init__(self, connection_string: str, **options) -> None:
+    def __init__(self, dsn: str, **options) -> None:
         try:
-            self._engine = create_engine(connection_string, **options)
+            self._engine = create_engine(dsn, **options)
         except OperationalError:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -36,4 +36,4 @@ class DB:
             session.close()
 
 
-db = DB(settings.DB_CONNECTION_STRING)
+db = DB(config.MYSQL_DSN)

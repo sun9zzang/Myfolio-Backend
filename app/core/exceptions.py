@@ -1,18 +1,23 @@
 # Custom Exceptions
 from typing import Optional, Union
 
-from app.core.schemas.errors import Error, ErrorList
+from app.core.schemas.errors import Error
 
 
 class HTTPException(Exception):
     def __init__(
         self,
         status_code: int,
-        errors: Union[Error, ErrorList],
+        errors: Union[Error, list[Error]],
         headers: Optional[dict] = None,
     ) -> None:
+        if type(errors) is Error:
+            self.errors = [errors]
+        elif type(errors) is list[Error]:
+            self.errors = errors
+        else:
+            raise ValueError
         self.status_code = status_code
-        self.errors = errors
         self.headers = headers
 
     def __repr__(self) -> str:

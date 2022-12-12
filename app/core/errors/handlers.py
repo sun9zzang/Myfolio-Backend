@@ -7,12 +7,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.errors.errors import ManagedErrors
 from app.core.exceptions import HTTPException
-from app.core.schemas.errors import Error, ErrorList
 
 
 async def http_exception_hander(req: Request, exc: HTTPException) -> ORJSONResponse:
-    if isinstance(exc.errors, Error):
-        exc.errors = ErrorList().append(exc.errors)
 
     return ORJSONResponse(
         content=jsonable_encoder(exc.errors),
@@ -23,6 +20,7 @@ async def http_exception_hander(req: Request, exc: HTTPException) -> ORJSONRespo
 async def request_validation_exception_handler(
     req: Request, exc: ValidationError
 ) -> ORJSONResponse:
+
     bad_request_exc = HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         errors=ManagedErrors.bad_request,
@@ -33,6 +31,7 @@ async def request_validation_exception_handler(
 async def starlette_http_exception_handler(
     req: Request, exc: StarletteHTTPException
 ) -> ORJSONResponse:
+
     try:
         error = ManagedErrors.basic_error_responses[exc.status_code]
     except KeyError:
@@ -52,6 +51,7 @@ async def starlette_http_exception_handler(
 async def not_implemented_error_handler(
     req: Request, exc: NotImplementedError
 ) -> ORJSONResponse:
+
     not_found_exc = HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         errors=ManagedErrors.not_found,
