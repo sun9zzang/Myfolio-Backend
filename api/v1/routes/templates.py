@@ -1,10 +1,15 @@
-from fastapi import APIRouter, Depends, Path, Query, status
+import base64
+
+from fastapi import APIRouter, Body, Depends, Response, Path, Query, status
 
 from app.core.config import config
 from app.core.errors.errors import ManagedErrors
 from app.core.exceptions import HTTPException
 from app.core.openapi import ResponseSchemaV1
-from app.core.schemas.templates import TemplatesResponse
+from app.core.schemas.templates import (
+    TemplateInCreate,
+    TemplateInUpdate,
+)
 from app.core.schemas.users import UserInDB
 from app.db.errors import EntityDoesNotExist
 from app.db.repositories.templates import TemplatesRepository
@@ -21,10 +26,25 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
 )
 async def create_template(
+    template_in_create: TemplateInCreate = Body(...),
     current_user: UserInDB = Depends(get_current_user_authorizer()),
-    templates_repo: TemplatesRepository = Depends(get_repository(TemplatesRepository)),
+    templates_repo: TemplatesRepository = Depends(
+        get_repository(TemplatesRepository)
+    ),
 ):
-    raise NotImplementedError
+    if template_in_create.type not in ("portfolio", "resume"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            errors=ManagedErrors.bad_request,
+        )
+
+    # todo validate fields
+
+    template = templates_repo.create_template(
+        current_user.id, template_in_create
+    )
+
+    return template
 
 
 @router.get(
@@ -35,7 +55,9 @@ async def create_template(
 )
 async def retrieve_template(
     template_id: int = Path(...),
-    templates_repo: TemplatesRepository = Depends(get_repository(TemplatesRepository)),
+    templates_repo: TemplatesRepository = Depends(
+        get_repository(TemplatesRepository)
+    ),
 ):
     try:
         template = templates_repo.retrieve_template_by_id(template_id)
@@ -55,26 +77,27 @@ async def retrieve_template(
     responses=ResponseSchemaV1.Templates.RETRIEVE_TEMPLATES_LIST,
 )
 async def retrieve_templates_list(
-    page: int = Query(1, ge=1),
-    limit: int = Query(
-        config.TEMPLATES_LIST_DEFAULT_ITEM_LIMIT,
-        ge=config.TEMPLATES_LIST_MIN_ITEM_LIMIT,
-        le=config.TEMPLATES_LIST_MAX_ITEM_LIMIT,
+    templates_type: str = Query(..., alias="type"),
+    cursor: str = Query(""),
+    limit: int = Query(10),
+    templates_repo: TemplatesRepository = Depends(
+        get_repository(TemplatesRepository)
     ),
-    templates_repo: TemplatesRepository = Depends(get_repository(TemplatesRepository)),
 ):
-    templates_list = templates_repo.retrieve_templates(
-        offset=page,
-        limit=limit,
+    # todo cursor validation
+    cursor_decoded = base64.b64decode(cursor).decode("utf-8") if cursor else ""
+
+    templates_list = templates_repo.retrieve_templates_list(
+        templates_type, cursor_decoded, limit
     )
 
-    if not templates_list:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            errors=ManagedErrors.not_found,
-        )
+    # if not templates_list.templates:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_404_NOT_FOUND,
+    #         errors=ManagedErrors.not_found,
+    #     )
 
-    return TemplatesResponse(templates=templates_list)
+    return templates_list
 
 
 @router.patch(
@@ -83,11 +106,37 @@ async def retrieve_templates_list(
     status_code=status.HTTP_200_OK,
 )
 async def update_template(
-    template_id: int = Path(...),
+    template_in_update: TemplateInUpdate = Body(...),
     current_user: UserInDB = Depends(get_current_user_authorizer()),
-    templates_repo: TemplatesRepository = Depends(get_repository(TemplatesRepository)),
+    templates_repo: TemplatesRepository = Depends(
+        get_repository(TemplatesRepository)
+    ),
 ):
-    raise NotImplementedError
+    try:
+        template_author_id = templates_repo.retrieve_author_id_by_template_id(
+            template_in_update.id
+        )
+    except EntityDoesNotExist:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            errors=ManagedErrors.not_found,
+        )
+
+    if template_author_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            errors=ManagedErrors.forbidden,
+        )
+
+    if not (template_in_update.title or template_in_update.content):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            errors=ManagedErrors.bad_request,
+        )
+
+    template = templates_repo.update_template(template_in_update)
+
+    return template
 
 
 @router.delete(
@@ -98,6 +147,31 @@ async def update_template(
 async def delete_template(
     template_id: int = Path(...),
     current_user: UserInDB = Depends(get_current_user_authorizer()),
-    templates_repo: TemplatesRepository = Depends(get_repository(TemplatesRepository)),
+    templates_repo: TemplatesRepository = Depends(
+        get_repository(TemplatesRepository)
+    ),
 ):
-    raise NotImplementedError
+    not_found = HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        errors=ManagedErrors.not_found,
+    )
+
+    try:
+        template_author_id = templates_repo.retrieve_author_id_by_template_id(
+            template_id
+        )
+    except EntityDoesNotExist:
+        raise not_found
+
+    if template_author_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            errors=ManagedErrors.forbidden,
+        )
+
+    try:
+        templates_repo.delete_template(template_id)
+    except EntityDoesNotExist:
+        raise not_found
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -13,7 +13,10 @@ class HTTPException(Exception):
     ) -> None:
         if type(errors) is Error:
             self.errors = [errors]
-        elif type(errors) is list[Error]:
+        elif type(errors) is list:
+            for error in errors:
+                if type(error) is not Error:
+                    raise ValueError
             self.errors = errors
         else:
             raise ValueError

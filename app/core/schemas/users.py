@@ -4,22 +4,23 @@ import bcrypt
 from pydantic import BaseModel
 
 
-class UserBase(BaseModel):
-    email: str
-    username: str
-
-
 class User(BaseModel):
-    user_id: int
+    id: int
     email: str
     username: str
 
+    class Config:
+        orm_mode = True
 
-class UserInCreate(UserBase):
+
+class UserInCreate(BaseModel):
+    email: str
+    username: str
     password: str
 
 
-class UserInUpdate(User):
+class UserInUpdate(BaseModel):
+    id: int
     email: Optional[str] = None
     username: Optional[str] = None
     password: Optional[str] = None
@@ -48,7 +49,9 @@ class UserInDB(User):
 
     def change_password(self, password: str) -> None:
         self.salt = bcrypt.gensalt()
-        self.hashed_password = bcrypt.hashpw(password.encode("utf-8"), self.salt)
+        self.hashed_password = bcrypt.hashpw(
+            password.encode("utf-8"), self.salt
+        )
 
     class Config:
         orm_mode = True

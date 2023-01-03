@@ -44,7 +44,9 @@ class UsersRepository(BaseRepository):
             raise EntityDoesNotExist
 
     def username_exists(self, username: str) -> bool:
-        subquery = select(TblUsers).where(TblUsers.username == username).exists()
+        subquery = (
+            select(TblUsers).where(TblUsers.username == username).exists()
+        )
         query = select(subquery)
 
         with self.get_session() as session:
@@ -83,7 +85,7 @@ class UsersRepository(BaseRepository):
 
     def update_user(self, user_in_update: UserInUpdate) -> UserInDB:
         with self.get_session() as session:
-            user = session.get(TblUsers, user_in_update.user_id)
+            user = session.get(TblUsers, user_in_update.id)
 
             user.email = user_in_update.email or user.email
             user.username = user_in_update.username or user.username

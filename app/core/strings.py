@@ -17,3 +17,10 @@ class APINames:
     TEMPLATES_RETRIEVE_TEMPLATES_LIST_GET = "templates:retrieve-templates-list"
     TEMPLATES_UPDATE_TEMPLATE_PATCH = "templates:update-template"
     TEMPLATES_DELETE_TEMPLATE_DELETE = "templates:delete-template"
+
+    # Folios
+    FOLIOS_CREATE_FOLIO_POST = "folios:create-folio"
+    FOLIOS_RETRIEVE_FOLIO_GET = "folios:retrieve-folio"
+    FOLIOS_RETRIEVE_FOLIOS_LIST_GET = "folios:retrieve-folios-list"
+    FOLIOS_UPDATE_FOLIO_PATCH = "folios:update-folio"
+    FOLIOS_DELETE_FOLIO_DELETE = "folios:delete-folio"

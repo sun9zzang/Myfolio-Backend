@@ -25,12 +25,14 @@ def create_access_token_for_user(
 ) -> str:
     return create_jwt_token(
         jwt_content=User(
-            user_id=user_in_db.user_id,
+            id=user_in_db.id,
             email=user_in_db.email,
             username=user_in_db.username,
         ).dict(),
         secret_key=config.JWT_SECRET_KEY,
-        expires_delta=timedelta(minutes=config.JWT_ACCESS_TOKEN_EXPIRE_MINUTES),
+        expires_delta=timedelta(
+            minutes=config.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        ),
     )
 
 

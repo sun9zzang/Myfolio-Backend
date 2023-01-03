@@ -64,7 +64,7 @@ def get_current_user(
         )
 
     try:
-        return users_repo.get_user_by_user_id(user.user_id)
+        return users_repo.get_user_by_user_id(user.id)
     except EntityDoesNotExist:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

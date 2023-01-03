@@ -93,7 +93,7 @@ async def update_user(
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
 ):
     # authorization
-    if user_in_update.user_id != current_user.user_id:
+    if user_in_update.id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             errors=ManagedErrors.forbidden,
@@ -154,14 +154,14 @@ async def delete_user(
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
 ):
     # Authorization
-    if user_id != current_user.user_id:
+    if user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             errors=ManagedErrors.forbidden,
         )
 
     try:
-        users_repo.delete_user(current_user.user_id)
+        users_repo.delete_user(current_user.id)
     except EntityDoesNotExist:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

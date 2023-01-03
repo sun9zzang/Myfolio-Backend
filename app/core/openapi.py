@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from app.core.errors.errors import ManagedErrors
 from app.core.schemas.errors import Error, ErrorList
-from app.core.schemas.templates import Template, TemplatesResponse
+from app.core.schemas.templates import Template, TemplatesList
 from app.core.schemas.users import Token, User, UserWithToken
 
 
@@ -53,7 +53,10 @@ def custom_openapi(app: FastAPI) -> dict:
 
         try:
             for schema in list(app.openapi_schema["components"]["schemas"]):
-                if schema == "HTTPValidationError" or schema == "ValidationError":
+                if (
+                    schema == "HTTPValidationError"
+                    or schema == "ValidationError"
+                ):
                     del app.openapi_schema["components"]["schemas"][schema]
         except KeyError:
             pass
@@ -274,6 +277,13 @@ class ResponseSchemaV1:
         }
 
     class Templates:
+        CREATE_TEMPLATE = {
+            status.HTTP_200_OK: _get_schema(
+                description="요청 성공 시 템플릿을 생성하고, 생성한 템플릿을 반환합니다.",
+                model=Template,
+                example=ExampleModelDatas.template,
+            ),
+        }
         RETRIEVE_TEMPLATE = {
             status.HTTP_200_OK: _get_schema(
                 description="요청 성공 시 템플릿을 반환합니다.",
@@ -294,7 +304,7 @@ class ResponseSchemaV1:
         RETRIEVE_TEMPLATES_LIST = {
             status.HTTP_200_OK: _get_schema(
                 description="요청 성공 시 템플릿 리스트를 반환합니다.",
-                model=TemplatesResponse,
+                model=TemplatesList,
                 example=ExampleModelDatas.templates_response,
             ),
             status.HTTP_400_BAD_REQUEST: _get_schema(
