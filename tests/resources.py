@@ -1,6 +1,7 @@
 from enum import Enum
 
 from app.core.schemas.errors import Error
+from app.core.schemas.users import UserInCreate
 
 
 class AssertionStrings:
@@ -13,15 +14,15 @@ class AssertionStrings:
         return f"Error code가 [{', '.join([error.code for error in errors])}]이(가) 아닙니다."
 
 
-class UserTestData(Enum):
-    email = "test@test.com"
-    username = "test_username"
-    password = "p@ssw0rd"
+# class UserTestData(Enum):
+#     email = "test@test.com"
+#     username = "test_username"
+#     password = "p@ssw0rd"
 
 
 class TestParamData:
 
-    # Authorization
+    # Auth
     invalid_tokens = [
         "iamnottoken",
         "youthinkiamrealtoken??",
@@ -41,6 +42,38 @@ class TestParamData:
     ]
 
     # Users
+    test_user_in_create = UserInCreate(
+        email="test@test.com",
+        username="test_username",
+        password="p@ssw0rd",
+    )
+    user_fields_with_invalid_syntax = [
+        {
+            "foo": "bar",
+        },
+        {
+            "email": "email@email.com",
+        },
+        {
+            "username": "foo",
+            "password": "bar",
+        },
+        {
+            "email": 123,
+            "username": "foo",
+            "password": "bar",
+        },
+        {
+            "email": "email@email.com",
+            "username": 12345,
+            "password": "foo",
+        },
+        {
+            "email": "email@email.com",
+            "username": "foo",
+            "password": 123,
+        },
+    ]
     invalid_email_values = [
         "Abc.example.com",
         "A@b@c@example.com",
@@ -70,4 +103,9 @@ class TestParamData:
         ),
         "hgowrgwf@@@",
         "$$$$3213743",
+    ]
+    invalid_user_id = [
+        "abcdef",
+        "가나다",
+        "?",
     ]
